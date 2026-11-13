@@ -6,8 +6,11 @@
 <title>NSEQuant · Results</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="vendor/echarts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="fx.css">
+<script src="fx.js"></script>
 <style>
   :root { --bg:#f2f4f7; --panel:#fff; --panel2:#f8f9fb; --line:#e3e7ed; --line2:#cfd5de;
     --ink:#0d1626; --ink2:#475467; --muted:#8590a2; --brand:#1f4fd6; --brand-soft:#eaf0fd;
@@ -110,17 +113,29 @@
 </div></header>
 
 <main class="wrap">
-  <section class="intro">
-    <div>
-      <h1>Results: <span id="mName">ETHUSDT perpetual</span>, Bybit</h1>
-      <p>Every number below comes from replaying recorded Bybit order books and trades through our exchange simulator with HFT-firm infrastructure
-        (10 µs latency, −0.5 bp maker rebate). Settings were chosen on <b id="tuneDay">9 Nov</b> and never changed afterwards; every other day is out-of-sample.</p>
+  <section class="fx-hero">
+    <div class="fx-hero-copy">
+      <div>
+        <div class="fx-eyebrow">Results · <span id="mName">ETHUSDT perpetual</span>, Bybit</div>
+        <h1 class="fx-h1">Nine days. <i>Out of&nbsp;sample.</i></h1>
+        <p class="fx-lede">Recorded Bybit order books and every trade, replayed through our exchange simulator with HFT-firm infrastructure
+          (10 µs latency, −0.5 bp maker rebate). Settings were chosen on <b id="tuneDay">9 Nov</b> and never changed; every other day is out-of-sample.</p>
+      </div>
+      <div>
+        <div class="kl">Algorithm X · net P&amp;L over all test days</div>
+        <div class="fx-big" id="heroBig">–</div>
+        <div class="ks" id="heroSub" style="margin-top:8px"></div>
+        <div class="ks" id="gen" style="margin-top:10px;color:var(--muted)"></div>
+      </div>
     </div>
-    <span class="ks" id="gen"></span>
+    <div class="fx-stage" id="bars3d" aria-label="3D bars of net profit per day for X, X0 and Q; bars below the floor are losses">
+      <div class="fx-key"><span><i style="background:#1f4fd6"></i>X · Binance signal</span><span><i style="background:#c0447a"></i>X0 · signal off</span><span><i style="background:#d08c1a"></i>Q · NSQ-MM-Q</span></div>
+      <div class="fx-cap"><span><b>NET P&amp;L PER DAY</b> · <span id="barsRange"></span> · below the floor = loss</span><span>drag to orbit · scroll to zoom</span></div>
+    </div>
   </section>
 
   <section class="kpis" aria-label="Headline results">
-    <div class="kpi" id="k1"><div class="kl">Net P&amp;L · algorithm X · <span id="kN">9</span> out-of-sample days</div><div class="kv" id="kTot">–</div><div class="ks" id="kTotSub">–</div></div>
+    <div class="kpi" id="k1"><div class="kl">Mean per day · algorithm X · <span id="kN">9</span> days</div><div class="kv" id="kTot">–</div><div class="ks" id="kTotSub">–</div></div>
     <div class="kpi"><div class="kl">Days profitable</div><div class="kv" id="kDays">–</div><div class="ks" id="kDaysSub">multi-day test</div></div>
     <div class="kpi"><div class="kl">Value of the Binance signal</div><div class="kv" id="kSig">–</div><div class="ks" id="kSigSub">X vs the same quotes without it</div></div>
     <div class="kpi"><div class="kl">Prediction accuracy</div><div class="kv" id="kAcc">–</div><div class="ks" id="kAccSub">–</div></div>
@@ -208,6 +223,10 @@ const TIP = { backgroundColor: "#fff", borderColor: "#cfd5de", borderWidth: 1, t
 const AXL = { color: INK2, fontFamily: "IBM Plex Mono", fontSize: 11 };
 const NAMEM = { ETHUSDT: "ETHUSDT perpetual", BTCUSDT: "BTCUSDT spot" };
 let D = null, M = "ETHUSDT";
+FX.loader({ title: "Nine days, <i>out of sample.</i>", status: ["Loading 9 days of order books", "Replaying every trade print", "Scoring out-of-sample days", "Building the results", "Ready"] });
+const BARS = FX.bars3d($("bars3d"));
+FX.rise(".fx-hero, .kpis, .wrap > .panel, .grid2, .caveats");
+FX.tilt(".kpis .kpi", 6);
 const cDays = echarts.init($("cDays")), cEq = echarts.init($("cEq"));
 
 function draw() {
@@ -222,10 +241,15 @@ function draw() {
   const sum = (D.days_summary || []).filter(r => r.market === M);
   const sx = sum.find(r => r.strategy === "X"), sx0 = sum.find(r => r.strategy === "X0");
   if (sx) {
+    FX.count($("heroBig"), sx.net_total, v => `<span class="${cls(sx.net_total)}">${usd(v)}</span><small>USDT</small>`);
+    $("heroSub").innerHTML = `<b>${sx.positive_days} of ${sx.days}</b> days profitable · the Binance signal beat the same quotes without it on ` +
+      `<b>${(() => { const a = (D.days || []).filter(r => r.market === M && r.strategy === "X"); return a.filter(r => r.net_pnl > ((D.days || []).find(z => z.market === M && z.strategy === "X0" && z.day === r.day)?.net_pnl ?? Infinity)).length; })()} of ${sx.days}</b> days`;
+  }
+  if (sx) {
     $("kN").textContent = sx.days;
     $("k1").classList.toggle("loss", sx.net_total < 0);
-    $("kTot").innerHTML = `${usd(sx.net_total)}<small>USDT</small>`; $("kTot").className = "kv " + cls(sx.net_total);
-    $("kTotSub").innerHTML = `mean ${usd(sx.net_mean)} / day · t = ${sx.net_t == null ? "–" : sx.net_t.toFixed(2)} · <b class="${cls(sx.gross_total)}">${usd(sx.gross_total)}</b> before fees &amp; rebate`;
+    $("kTot").innerHTML = `${usd(sx.net_mean)}<small>USDT / day</small>`; $("kTot").className = "kv " + cls(sx.net_mean);
+    $("kTotSub").innerHTML = `t = ${sx.net_t == null ? "–" : sx.net_t.toFixed(2)} · total <b>${usd(sx.net_total)}</b> · <b class="${cls(sx.gross_total)}">${usd(sx.gross_total)}</b> before fees &amp; rebate`;
     $("kDays").innerHTML = `${sx.positive_days}<small>/ ${sx.days}</small>`;
     $("kDaysSub").innerHTML = `best ${usd(sx.best_day)} · worst ${usd(sx.worst_day)}`;
   } else { $("kDays").textContent = "running"; $("kTot").textContent = "–"; $("kTotSub").textContent = "multi-day test in progress"; }
@@ -264,6 +288,11 @@ function draw() {
     (sx ? `<tr class="hl"><td>Total, ${sx.days} days</td><td class="${cls(sx.net_total)}">${usd(sx.net_total)}</td><td class="${cls(sx.gross_total)}">${usd(sx.gross_total)}</td><td></td><td>${usd(sx.max_drawdown)}</td>` +
       `<td class="${cls(sx0?.net_total)}">${usd(sx0?.net_total)}</td><td class="${cls(sum.find(r => r.strategy === "Q")?.net_total)}">${usd(sum.find(r => r.strategy === "Q")?.net_total)}</td><td></td></tr>` : "")
     : `<tr><td class="wait">Multi-day test running; this fills in when multiday.py finishes.</td></tr>`;
+
+  BARS.set(dlist.map(dd), { X: dlist.map(d => get(d, "X")?.net_pnl ?? null), X0: dlist.map(d => get(d, "X0")?.net_pnl ?? null), Q: dlist.map(d => get(d, "Q")?.net_pnl ?? null) },
+           { X: C.X, X0: C.X0, Q: C.Q });
+  $("barsRange").textContent = dlist.length ? `${dd(dlist[0])} – ${dd(dlist[dlist.length - 1])}` : "";
+  FX.ready();
 
   // ---- cumulative curves across days
   const curves = (D.curves || []).filter(c => c.market === M).sort((a, b) => a.day < b.day ? -1 : 1);

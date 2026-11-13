@@ -365,7 +365,7 @@ BACKTEST = load_backtest()
 def serve(port):
     OUT.mkdir(parents=True, exist_ok=True)
     shutil.copy(ROOT / "web" / "trading.html", OUT / "index.html")
-    for page in ("results.html", "results_data.json"):     # Results page: backtests + the live session
+    for page in ("results.html", "results_data.json", "fx.js", "fx.css"):   # Results page + shared 3D effects
         if (ROOT / "web" / page).exists():
             shutil.copy(ROOT / "web" / page, OUT / page)
     shutil.copytree(ROOT / "web" / "vendor", OUT / "vendor", dirs_exist_ok=True)
