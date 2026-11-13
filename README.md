@@ -10,6 +10,8 @@ Open http://127.0.0.1:8000/dashboard.html — it reads `web/state.json` (a snaps
 Edit `state.json` by hand to test edge cases (empty book, gaps, no probabilities).
 
 Paper-trading page: http://127.0.0.1:8000/trading.html?state=paper_state.json&heat=paper_heat.json (a live snapshot of the NSQ-MM paper trader).
+Results page: http://127.0.0.1:8000/results.html?state=paper_state.json — reads `results_data.json` (built on the backend by
+`make_results.py`: strategies, per-day results and curves, delay check, accuracy, latency) and the live state for its last panel.
 Its data comes from `paper_trade.py` on the backend: `strategies {A, C, T}` (gross, net_vip0, fills, position, markout10s_ticks),
 `last` (probs, mid, fair, alpha_term, inv_term, quote_bid, quote_ask, pull flags, book), `series` [ts, mid, bid, ask, our bid, our ask],
 `equity {A, C, T}` [ts, P&L], `fills` [{t, strategy, side, price, qty}], `latency`, `params`, `backtest` rows.
