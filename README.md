@@ -9,10 +9,13 @@ python -m http.server 8000 -d web
 Open http://127.0.0.1:8000/dashboard.html — it reads `web/state.json` (a snapshot from a NIFTY replay) once a second.
 Edit `state.json` by hand to test edge cases (empty book, gaps, no probabilities).
 
-Paper-trading page: http://127.0.0.1:8000/trading.html?state=paper_state.json (a live snapshot of the NSQ-MM paper trader).
+Paper-trading page: http://127.0.0.1:8000/trading.html?state=paper_state.json&heat=paper_heat.json (a live snapshot of the NSQ-MM paper trader).
 Its data comes from `paper_trade.py` on the backend: `strategies {A, C, T}` (gross, net_vip0, fills, position, markout10s_ticks),
 `last` (probs, mid, fair, alpha_term, inv_term, quote_bid, quote_ask, pull flags, book), `series` [ts, mid, bid, ask, our bid, our ask],
 `equity {A, C, T}` [ts, P&L], `fills` [{t, strategy, side, price, qty}], `latency`, `params`, `backtest` rows.
+Depth heatmap: `heat` = newest columns `[ts, lowest tick, best bid tick, best ask tick, sizes[301]]` (resting size at each tick
+from the lowest one up, ±150 ticks around the mid, one column per 300 ms) and `trades_heat` = `[t0, t1, tick, buy volume, sell volume]`.
+`state.json` carries only the newest columns; `heat.json` holds the last 2 minutes and is read once when the page opens.
 
 ## Data contract (`state.json`, published by `live_predict.py`)
 `mode`, `symbol`, `updated`, `ticks`, `resolved`, `horizon`, `accuracy`, `rolling`, `majority`,
