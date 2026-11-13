@@ -46,3 +46,7 @@ Libraries are vendored in `web/vendor/` (ECharts 5.4.3, GSAP 3.12.5) so the page
 `fx.js` / `fx.css` hold the shared effects for the paper-trading and Results pages: a short light loading screen (the logo's
 chart line draws itself, status lines, a sliding bar; it fades out on the first data, 0.9-4 s), the live depth chart with fading history, the animated cumulative P&L lines, the ticker band, word reveals, cursor ring and card
 spotlight. Reduced-motion users get the pages without the animation.
+
+The paper-trading page now shows only algorithm X and the no-model baseline A (the backend still publishes C and T).
+hftbacktest replay: `hbt.html` reads `x_replay.json`, `heat.bin` (float32, columns of 301 sizes) and `trades.bin` (float64 rows
+[ms from window start, price, qty, side]) produced on the backend by `hbt/run_x.py`; no sample data is kept here (about 17 MB).
