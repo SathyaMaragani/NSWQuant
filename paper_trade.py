@@ -12,6 +12,7 @@ Three strategies run side by side on identical data:
 import argparse
 import http.server
 import json
+import math
 import os
 import shutil
 import threading
@@ -126,6 +127,7 @@ class Engine:
         self.n_book = self.n_trades = 0
         self.last = {}
         self.last_msg = time.time()
+        self.algo_log, self.log_seq, self.last_sig = deque(maxlen=600), 0, (None, -10 ** 15)   # terminal view on the page
         OUT.mkdir(parents=True, exist_ok=True)
         tm.tick_predict(np.zeros(tm.ST_SIZE), np.ones(23), self.tick, self.mu, self.a, self.xb.copy(), self.xq.copy(),
                         *self.P, self.h1.copy(), self.h2.copy(), self.lg.copy())   # compile before the feed starts
@@ -152,8 +154,12 @@ class Engine:
         self.decide_us.append((time.perf_counter_ns() - t0) / 1000)
         bpt, apt = tuple(self.ticks(p) for p in bp), tuple(self.ticks(p) for p in ap)
         self.strat["A"].on_book(ts, bpt, tuple(bq), apt, tuple(aq))
+        self.log_signal(ts, prob, move, c)
+        before, tk = self.snap(self.strat["C"]), (self.taker.state, len(self.taker.fills))
         self.strat["C"].on_book(ts, bpt, tuple(bq), apt, tuple(aq), move, pull_bid, pull_ask)
         self.taker.on_book(ts, bpt[0], apt[0], prob)
+        self.diff_mm(ts, before, prob, pull_bid, pull_ask, move, 0.5 * (bpt[0] + apt[0]))
+        self.diff_taker(ts, tk, prob)
         mid = 0.5 * (bpt[0] + apt[0])
         self.mids.append((ts, mid))
         C = self.strat["C"]
@@ -179,6 +185,81 @@ class Engine:
             self.last_eq_ts = ts
         self.n_book += 1
 
+    # ----- algorithm terminal: every line is a state change of the simulated strategy -------------------------
+    def log(self, ts, who, kind, msg):
+        self.log_seq += 1
+        self.algo_log.append({"seq": self.log_seq, "t": ts, "s": who, "k": kind, "m": msg})
+
+    def px(self, ticks, extra=0):
+        return f"{ticks * self.tick:,.{max(0, -int(math.floor(math.log10(self.tick)))) + extra}f}"
+
+    @staticmethod
+    def snap(mm):
+        return dict(mm.target), {k: (None if v is None else v[0]) for k, v in mm.live.items()}, len(mm.fills), mm.pos
+
+    def log_signal(self, ts, prob, move, c):
+        """Model output, logged when the call changes (at most every 2 s) so the terminal stays readable."""
+        if c != self.last_sig[0] and ts - self.last_sig[1] >= 2000:
+            arrow = ("▼ DOWN", "● FLAT", "▲ UP")[c]
+            self.log(ts, "M", "SIGNAL", f"model {arrow} {prob[c]:.0%}  (down {prob[0]:.0%} · flat {prob[1]:.0%} · up {prob[2]:.0%})"
+                                         f"  E[move] {move:+.2f} ticks  · {self.decide_us[-1]:.1f} µs")
+            self.last_sig = (c, ts)
+
+    def diff_mm(self, ts, before, prob=None, pull_bid=False, pull_ask=False, move=0.0, mid=None, trade=None):
+        mm, (tgt0, live0, nf0, pos0) = self.strat["C"], before
+        name = {+1: "BID", -1: "ASK"}
+        filled = set()
+        for fts, side, fpx, q in mm.fills[nf0:]:
+            filled.add(side)
+            pos_after = pos0 + side * q
+            how = "traded through" if trade and ((side > 0 and trade[0] < fpx) or (side < 0 and trade[0] > fpx)) else "queue reached"
+            kind = "EXIT" if abs(pos_after) < abs(pos0) - 1e-12 else "FILL"
+            self.log(fts, "C", kind, f"{'BUY' if side > 0 else 'SELL'} {q:g} @ {self.px(fpx)}  ({how})  position {pos0:+g} → {pos_after:+g}"
+                                     f"  · maker fee {self.maker_bps:g} bp")
+            if abs(pos_after) < 1e-12:
+                m = mid if mid is not None else (self.mids[-1][1] if self.mids else fpx)
+                self.log(fts, "C", "FLAT", f"round trip closed · inventory 0 · session P&L {mm.equity_ticks(m) * self.tick:+.4f} USDT before fees")
+            pos0 = pos_after
+        for side in (+1, -1):
+            p0, p1 = live0[side], (None if mm.live[side] is None else mm.live[side][0])
+            if p1 is not None and p1 != p0:
+                qa = mm.live[side][1]
+                where = "behind the visible 5 levels" if qa > 1e17 else "front of the queue" if qa <= 0 else f"{qa:g} {self.symbol[:-4]} ahead in queue"
+                self.log(ts, "C", "LIVE", f"{name[side]} live @ {self.px(p1)} after {mm.lat} ms simulated latency · {where}")
+        if prob is None:
+            return
+        for side in (+1, -1):
+            t0, t1 = tgt0[side], mm.target[side]
+            if t0 == t1 or side in filled and t1 is None:
+                continue
+            fair = mid - mm.inv_skew * mm.pos / mm.size + mm.kappa * move
+            why = (f"fair {self.px(fair, 1)} = mid {self.px(mid, 1)} {mm.kappa * move:+.2f}t model {-mm.inv_skew * mm.pos / mm.size:+.2f}t inventory"
+                   f" ∓ half-spread {mm.half:g}t")
+            if t1 is None:
+                if (side > 0 and pull_bid) or (side < 0 and pull_ask):
+                    r = f"model says {'▼' if side > 0 else '▲'} {max(prob):.0%} ≥ {self.tau_pull:.0%}: step away before being run over"
+                else:
+                    r = f"position cap {mm.qmax * mm.size:g} reached"
+                self.log(ts, "C", "CANCEL", f"{name[side]} {self.px(t0)} pulled · {r}")
+            elif t0 is None:
+                self.log(ts, "C", "PLACE", f"{name[side]} {mm.size:g} @ {self.px(t1)} post-only · {why}")
+            else:
+                self.log(ts, "C", "AMEND", f"{name[side]} {self.px(t0)} → {self.px(t1)} · {why}")
+
+    def diff_taker(self, ts, before, prob):
+        t, (st0, nf0) = self.taker, before
+        if st0 == "flat" and t.state == "entering":
+            self.log(ts, "T", "ENTER", f"model {'▲' if t.side > 0 else '▼'} {max(prob):.0%} ≥ {t.tau:.0%} → market {'BUY' if t.side > 0 else 'SELL'} {t.size:g} (arrives in {t.lat} ms)")
+        if st0 == "holding" and t.state == "exiting":
+            self.log(ts, "T", "EXIT", f"held {t.hold} book events → market {'SELL' if t.side > 0 else 'BUY'} {t.size:g} to close")
+        for fts, side, fpx, q in t.fills[nf0:]:
+            if t.state == "flat":
+                e = t.fills[-2]
+                pnl = (fpx - e[2]) * e[1] * q * self.tick
+                self.log(fts, "T", "FLAT", f"{'SELL' if side < 0 else 'BUY'} {q:g} @ {self.px(fpx)} · trade P&L {pnl:+.4f} USDT before {self.taker_bps:g} bp taker fee x2")
+            else:
+                self.log(fts, "T", "FILL", f"{'BUY' if side > 0 else 'SELL'} {q:g} @ {self.px(fpx)} (taker, crossed the spread) · holding")
+
     def heat_column(self, ts, mid, bid, ask):
         """[ts, lowest tick, best bid tick, best ask tick, resting size at each tick lo..lo+2W] from the full book."""
         lo, col = int(round(mid)) - HEAT_W, [0.0] * (2 * HEAT_W + 1)
@@ -194,7 +275,9 @@ class Engine:
             ts, px, q, side = int(t["T"]), self.ticks(float(t["p"])), float(t["v"]), (1 if t["S"] == "Buy" else -1)
             self.tbucket.setdefault(px, [0.0, 0.0])[0 if side > 0 else 1] += q
             self.strat["A"].on_trade(ts, px, q, side)
+            before = self.snap(self.strat["C"])
             self.strat["C"].on_trade(ts, px, q, side)
+            self.diff_mm(ts, before, trade=(px, q, side))
             self.n_trades += 1
 
     def _markout(self, fills, horizon_ms=10_000):
@@ -233,7 +316,7 @@ class Engine:
             "uptime_s": int(time.time() - self.started), "book_events": self.n_book, "trades": self.n_trades,
             "unit": self.unit, "tick": self.tick, "latency_ms_sim": LAT_MS,
             "fees_bps": {"maker": self.maker_bps, "taker": self.taker_bps}, "params": self.params,
-            "last": self.last, "series": list(self.series), **self.heat_payload(12),   # newest heat columns only; the page keeps the history
+            "last": self.last, "series": list(self.series), **self.heat_payload(12), "log": list(self.algo_log)[-120:],   # newest heat columns only; the page keeps the history
             "equity": {k: list(v) for k, v in self.eq.items()},
             "strategies": {"A": self.summary("A", S["A"], self.maker_bps), "C": self.summary("C", S["C"], self.maker_bps),
                            "T": self.summary("T", self.taker, self.taker_bps)},
@@ -362,6 +445,8 @@ def selftest():
         need = {"strategies", "equity", "series", "heat", "trades_heat", "fills", "latency", "params", "last", "tick"}
         assert need <= st.keys(), need - st.keys()
         assert len(st["heat"]) == 2 and st["trades_heat"] == [[1000, 1400, eng.ticks(2000.01), 0.5, 0.0]]
+        kinds = [e["k"] for e in st["log"] if e["s"] == "C"]
+        assert "PLACE" in kinds and "LIVE" in kinds and kinds.index("PLACE") < kinds.index("LIVE"), st["log"]
     print("selftest ok: live book rebuild, taker state machine, depth heat column, published state")
 
 
