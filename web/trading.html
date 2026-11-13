@@ -164,13 +164,39 @@
   .st.OPEN { background: var(--brand-soft); color: var(--brand); } .st.PENDING { background: var(--amber-soft); color: var(--amber); }
   .st.COMPLETE { background: var(--bid-soft); color: var(--bid); } .st.CANCELLED { background: #eef1f5; color: var(--muted); }
   .st.REJECTED { background: var(--ask-soft); color: var(--ask); }
-  .btabs { display: flex; align-items: center; gap: 4px; margin-top: 14px; padding-bottom: 8px; flex-wrap: wrap; }
-  .btabs [role=tab] { border: 0; background: none; font: 600 12.5px var(--sans); color: var(--ink2); padding: 7px 10px; border-radius: 5px; cursor: pointer; }
-  .btabs [role=tab] b { font: 600 11px var(--mono); background: #eef1f5; border-radius: 9px; padding: 1px 7px; margin-left: 4px; }
-  .btabs [role=tab].on { background: var(--ink); color: #fff; } .btabs [role=tab].on b { background: rgba(255,255,255,.18); }
-  .btabs [role=tab]:focus-visible, .seg button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .seg button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
   .seg.sm button { padding: 4px 9px; font-size: 11.5px; }
-  .tapebox { height: 520px; overflow: auto; }
+  /* account card: header, position chip, underline tabs, contextual tools */
+  .acct .head { margin-bottom: 10px; }
+  .poschip { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; padding: 8px 10px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 6px;
+    font: 500 12px var(--mono); color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .poschip b { color: var(--ink); font-weight: 600; } .poschip .k { font: 600 10px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 5px; }
+  .poschip.flash { animation: rowflash 2.4s ease-out; }
+  .atabs { display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--line); flex-wrap: wrap; row-gap: 6px; }
+  .atabs [role=tab] { border: 0; background: none; font: 600 12.5px var(--sans); color: var(--ink2); padding: 8px 12px 9px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .atabs [role=tab]:hover { color: var(--ink); }
+  .atabs [role=tab].on { color: var(--brand); border-bottom-color: var(--brand); }
+  .atabs [role=tab] b { font: 600 10.5px var(--mono); background: #eef1f5; color: var(--ink2); border-radius: 9px; padding: 1px 7px; margin-left: 5px; }
+  .atabs [role=tab].on b { background: var(--brand-soft); color: var(--brand); }
+  .atabs [role=tab]:focus-visible, .xbtn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .atabs .tools { display: none; gap: 6px; align-items: center; padding-bottom: 6px; flex-wrap: wrap; }
+  .atabs .tools.on { display: flex; }
+  .xbtn { border: 1px solid var(--line2); background: var(--panel); color: var(--ink2); font: 500 11.5px var(--sans); padding: 4px 10px; border-radius: 5px; cursor: pointer; }
+  .xbtn:hover { color: var(--ink); border-color: var(--ink2); }
+  .tsum { display: none; flex-wrap: wrap; gap: 4px 18px; padding: 8px 2px; font: 500 11.5px var(--mono); color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .tsum.on { display: flex; } .tsum b { color: var(--ink); font-weight: 600; }
+  .posdet { display: none; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+  .posdet.on { display: grid; }
+  .posdet > div { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; background: var(--panel2); min-width: 0; }
+  .posdet .l { font: 600 10px var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .posdet .v { font: 600 15px var(--mono); color: var(--ink); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .posdet .s { font-size: 11px; color: var(--ink2); margin-top: 3px; }
+  .capbar { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+  .capbar i { display: block; height: 100%; background: var(--brand); }
+  .hscroll.tall.short { height: 196px; }
+  .tape tr.big td { font-weight: 700; } .tape tr.big td:first-child { box-shadow: inset 3px 0 0 var(--amber); }
+  @media (max-width: 1100px) { .posdet { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .tapebox { height: 470px; overflow: auto; }
   .tape { min-width: 0; } .tape td:nth-child(2) { font-weight: 600; }
   .empty td { text-align: center !important; color: var(--muted); font-family: var(--sans); padding: 18px; }
   @media (max-width: 1350px) { .desk { grid-template-columns: 420px minmax(0, 1fr); } .desk > .card:last-child { grid-column: 1 / -1; } .tapebox { height: 260px; } }
@@ -204,23 +230,34 @@
       <div class="ladwrap" id="ladwrap"><table class="ladder" id="ladder" aria-label="Order book with cumulative totals and our working orders"></table></div>
       <div class="note" id="dNote">Bybit live book · our working orders tagged at their price</div>
     </div>
-    <div class="card">
-      <div class="head"><h2>Positions</h2>
-        <div class="seg" role="group" aria-label="Strategy shown in orders and trades" id="dStrat">
+    <div class="card acct">
+      <div class="head"><h2>Account</h2>
+        <div class="seg" role="group" aria-label="Strategy shown in positions, orders and trades" id="dStrat">
           <button class="on" data-s="X">Algorithm X + Model</button><button data-s="C">C · NSQ-MM</button><button data-s="A">A · no model</button><button data-s="T">T · taker</button><button data-s="all">All</button>
         </div></div>
       <div class="xsig" id="xsig">–</div>
-      <div class="hscroll"><table class="blot" id="posTbl"></table></div>
-      <div class="btabs" role="tablist" aria-label="Orders and trades">
-        <button role="tab" class="on" data-b="orders" aria-selected="true">Order book <b id="nOpen">0</b></button>
+      <div class="poschip" id="posChip" aria-live="polite"></div>
+      <div class="atabs" role="tablist" aria-label="Positions, orders and trades">
+        <button role="tab" class="on" data-b="pos" aria-selected="true">Positions</button>
+        <button role="tab" data-b="open" aria-selected="false">Open orders <b id="nOpen">0</b></button>
+        <button role="tab" data-b="hist" aria-selected="false">Order history <b id="nHist">0</b></button>
         <button role="tab" data-b="trades" aria-selected="false">Trade book <b id="nTr">0</b></button>
         <span class="grow"></span>
-        <div class="seg sm" role="group" aria-label="Order filter" id="oFilt"><button class="on" data-o="all">All</button><button data-o="open">Open</button><button data-o="done">Executed</button><button data-o="x">Cancelled</button></div>
+        <div class="tools" data-for="hist"><div class="seg sm" role="group" aria-label="Order history filter" id="oFilt"><button class="on" data-o="all">All</button><button data-o="done">Executed</button><button data-o="x">Cancelled / rejected</button></div></div>
+        <div class="tools" data-for="trades">
+          <div class="seg sm" role="group" aria-label="Trade side" id="tSide"><button class="on" data-v="all">All</button><button data-v="buy">Buys</button><button data-v="sell">Sells</button></div>
+          <div class="seg sm" role="group" aria-label="Liquidity" id="tLiq"><button class="on" data-v="all">All</button><button data-v="maker">Maker</button><button data-v="taker">Taker</button></div>
+          <button class="xbtn" id="tCsv" title="Download the trades shown as CSV">Export CSV</button>
+        </div>
       </div>
+      <div class="tsum" id="tsum"></div>
       <div class="hscroll tall"><table class="blot" id="blot"></table></div>
+      <div class="posdet" id="posDet"></div>
     </div>
     <div class="card">
-      <div class="head"><h2>Time &amp; sales</h2><span class="sub">market trades</span></div>
+      <div class="head"><h2>Time &amp; sales</h2>
+        <div class="seg sm" role="group" aria-label="Minimum trade size" id="tsMin"><button class="on" data-m="0">All</button><button data-m="1">≥ 1</button><button data-m="10">≥ 10</button></div></div>
+      <div class="imb" id="tsVol"></div>
       <div class="tapebox"><table class="blot tape" id="tape"></table></div>
     </div>
   </section>
@@ -528,7 +565,7 @@ function render(S) {
   }
 }
 // ---------------------------------------------------------------- trading desk: depth, positions, order book, trade book, tape
-let DS = "X", DB = "orders", DO = "all", LASTDESK = null;
+let DS = "X", DB = "pos", DO = "all", LASTDESK = null;
 const SEENTR = new Set(), POSN = {};
 let DESKFIRST = true;
 const SNAME = { X: "X · Algorithm X + Model", C: "C · NSQ-MM", A: "A · no model", T: "T · taker" };
@@ -621,43 +658,115 @@ function renderDesk(D) {
   LASTDESK = D;
   const B = D.books, ALL = ["X", "C", "A", "T"].filter(k => B[k]), keys = DS === "all" ? ALL : B[DS] ? [DS] : ["C"];
   renderBook(D, B);
-  // positions, one row per strategy; a row flashes when it trades
-  const pr = ["<tr><th>Strategy</th><th>Net qty</th><th>Avg price</th><th>Mark (mid)</th><th>Unrealised</th><th>Realised</th><th title=\"Negative = fees paid, positive = maker rebate received\">Fees / rebate</th><th>Net P&amp;L</th><th>Bought</th><th>Sold</th></tr>"];
-  for (const k of ALL) {
-    const b = B[k], p = b.position, fl = POSN[k] != null && b.n_trades > POSN[k];
-    POSN[k] = b.n_trades;
-    pr.push(`<tr class="${keys.includes(k) && DS !== "all" ? "sel" : ""}${fl ? " flash" : ""}"><td>${stag(k)}${SNAME[k].slice(4)}</td>` +
-      `<td class="${p.qty > 0 ? "pos" : p.qty < 0 ? "neg" : ""}">${p.qty > 0 ? "+" : ""}${qty(p.qty)}</td><td>${p.avg == null ? "–" : px(p.avg)}</td><td>${px(p.mark)}</td>` +
-      `<td>${sgn(p.unrealised)}</td><td>${sgn(p.realised)}</td><td>${(-p.fees).toFixed(2)}</td><td><b>${sgn(p.net)}</b></td>` +
-      `<td>${qty(p.buy_qty)} @ ${p.buy_avg == null ? "–" : px(p.buy_avg)}</td><td>${qty(p.sell_qty)} @ ${p.sell_avg == null ? "–" : px(p.sell_avg)}</td></tr>`);
+  // ---- position chip: the selected strategy, always visible; flashes when it trades
+  const pos = k => B[k].position, flashK = {};
+  for (const k of ALL) { flashK[k] = POSN[k] != null && B[k].n_trades > POSN[k]; POSN[k] = B[k].n_trades; }
+  const ck = DS === "all" ? null : keys[0];
+  if (ck) {
+    const p = pos(ck);
+    $("posChip").className = "poschip" + (flashK[ck] ? " flash" : "");
+    $("posChip").innerHTML = `<span>${stag(ck)}<b>${SNAME[ck].slice(4)}</b></span>` +
+      `<span><span class="k">Position</span><b class="${p.qty > 0 ? "pos" : p.qty < 0 ? "neg" : ""}">${p.qty > 0 ? "+" : ""}${qty(p.qty)} ETH</b>${p.avg == null ? "" : ` @ ${px(p.avg)}`}</span>` +
+      `<span><span class="k">Unrealised</span>${sgn(p.unrealised)}</span><span><span class="k">Realised</span>${sgn(p.realised)}</span>` +
+      `<span><span class="k">Net P&amp;L</span><b>${sgn(p.net)}</b> USDT</span>`;
+  } else {
+    const n = ALL.reduce((a, k) => a + pos(k).net, 0);
+    $("posChip").className = "poschip";
+    $("posChip").innerHTML = ALL.map(k => `<span>${stag(k)}<b class="${pos(k).qty > 0 ? "pos" : pos(k).qty < 0 ? "neg" : ""}">${pos(k).qty > 0 ? "+" : ""}${qty(pos(k).qty)}</b></span>`).join("") +
+      `<span><span class="k">Net P&amp;L, all</span><b>${sgn(n)}</b> USDT</span>`;
   }
-  $("posTbl").innerHTML = pr.join("");
-  // order book / trade book for the selected strategy
-  const orders = keys.flatMap(k => B[k].orders), trades = keys.flatMap(k => B[k].trades);
-  $("nOpen").textContent = orders.filter(openSt).length; $("nTr").textContent = keys.reduce((a, k) => a + B[k].n_trades, 0).toLocaleString();
+  // ---- tab counts and which tools show
+  const orders = keys.flatMap(k => B[k].orders);
+  $("nOpen").textContent = orders.filter(openSt).length;
+  $("nHist").textContent = keys.reduce((a, k) => a + B[k].n_orders, 0).toLocaleString();
+  $("nTr").textContent = keys.reduce((a, k) => a + B[k].n_trades, 0).toLocaleString();
+  document.querySelectorAll(".atabs .tools").forEach(el => el.classList.toggle("on", el.dataset.for === DB));
+  $("tsum").classList.toggle("on", DB === "trades");
+  $("posDet").classList.toggle("on", DB === "pos" && !!ck);
+  $("blot").parentElement.classList.toggle("short", DB === "pos" && !!ck);
   let html;
-  if (DB === "orders") {
-    const keep = { all: () => true, open: openSt, done: o => o.status === "COMPLETE", x: o => o.status === "CANCELLED" || o.status === "REJECTED" }[DO];
-    const rows = orders.filter(keep).sort((a, b) => (openSt(b) - openSt(a)) || (b.t - a.t)).slice(0, 120);
+  if (DB === "pos") {
+    html = "<tr><th>Strategy</th><th>Net qty</th><th>Avg price</th><th>Mark (mid)</th><th>Unrealised</th><th>Realised</th><th title=\"Negative = fees paid, positive = maker rebate received\">Fees / rebate</th><th>Net P&amp;L</th><th>Bought</th><th>Sold</th></tr>" +
+      ALL.map(k => { const p = pos(k);
+        return `<tr class="${k === ck ? "sel" : ""}${flashK[k] ? " flash" : ""}"><td>${stag(k)}${SNAME[k].slice(4)}</td>` +
+          `<td class="${p.qty > 0 ? "pos" : p.qty < 0 ? "neg" : ""}">${p.qty > 0 ? "+" : ""}${qty(p.qty)}</td><td>${p.avg == null ? "–" : px(p.avg)}</td><td>${px(p.mark)}</td>` +
+          `<td>${sgn(p.unrealised)}</td><td>${sgn(p.realised)}</td><td>${sgn(-p.fees)}</td><td><b>${sgn(p.net)}</b></td>` +
+          `<td>${qty(p.buy_qty)} @ ${p.buy_avg == null ? "–" : px(p.buy_avg)}</td><td>${qty(p.sell_qty)} @ ${p.sell_avg == null ? "–" : px(p.sell_avg)}</td></tr>`; }).join("");
+    if (ck) {                                     // details of the selected strategy's position
+      const p = pos(ck), S0 = LASTS || {}, unit = S0.unit || 0.1;
+      const cap = ck === "X" && S0.x ? S0.x.max_pos * S0.x.unit : ck === "T" ? unit : 5 * unit;   // A and C: MarketMaker qmax 5 lots
+      const be = p.qty ? (p.avg - (p.realised - p.fees) / p.qty) : null, used = Math.min(1, Math.abs(p.qty) / cap);
+      const bk = B[ck], mk = bk.trades.filter(f => f.maker).length;
+      $("posDet").innerHTML =
+        `<div><div class="l">Exposure</div><div class="v">${(Math.abs(p.qty) * p.mark).toLocaleString("en-US", { maximumFractionDigits: 0 })} USDT</div><div class="s">${p.qty > 0 ? "long" : p.qty < 0 ? "short" : "flat"} ${qty(Math.abs(p.qty))} ETH at ${px(p.mark)}</div></div>` +
+        `<div><div class="l">Position cap</div><div class="v">${(100 * used).toFixed(0)}%</div><div class="capbar"><i style="width:${(100 * used).toFixed(1)}%"></i></div><div class="s">limit ±${qty(cap)} ETH</div></div>` +
+        `<div><div class="l">Break-even price</div><div class="v">${be == null ? "–" : px(be)}</div><div class="s">${be == null ? "no open position" : "net P&amp;L is zero at this mid, fees included"}</div></div>` +
+        `<div><div class="l">P&amp;L split</div><div class="v">${sgn(p.realised + p.unrealised)}</div><div class="s">trading · fees/rebate ${sgn(-p.fees)} · net ${sgn(p.net)}</div></div>` +
+        `<div><div class="l">Activity</div><div class="v">${bk.n_trades.toLocaleString()} trades</div><div class="s">${bk.n_orders.toLocaleString()} orders · ${bk.trades.length ? (100 * mk / bk.trades.length).toFixed(0) : 0}% maker (last ${bk.trades.length})</div></div>`;
+    }
+  } else if (DB === "open" || DB === "hist") {
+    const keep = DB === "open" ? openSt : { all: () => true, done: o => o.status === "COMPLETE", x: o => o.status === "CANCELLED" || o.status === "REJECTED" }[DO];
+    const rows = orders.filter(keep).sort((a, b) => b.t - a.t).slice(0, 120);
     html = "<tr><th>Time</th><th>Order ID</th><th>Strategy</th><th>Type</th><th>Side</th><th>Price</th><th>Qty</th><th>Filled</th><th>Avg</th><th>Status</th><th>Detail</th></tr>" +
       (rows.length ? rows.map(o => {
         const info = o.status === "OPEN" ? (o.q >= 1e11 ? "behind the visible book" : `queue ahead ${qty(o.q)}`) + (o.mods ? ` · modified ×${o.mods}` : "")
           : o.status === "PENDING" ? `in flight · ${o.s === "X" ? "10 µs" : "50 ms"} latency` : o.status === "COMPLETE" ? `filled ${ms(o.tu)}` : o.note || (o.status === "CANCELLED" ? `cancelled ${ms(o.tu)}` : "");
         return `<tr><td>${ms(o.t)}</td><td>${o.id}</td><td>${stag(o.s)}</td><td>${o.type}</td><td>${side(o.side)}</td><td>${o.px == null ? "MKT" : px(o.px)}</td>` +
           `<td>${qty(o.qty)}</td><td>${qty(o.filled)}</td><td>${o.avg == null ? "–" : px(o.avg)}</td><td><span class="st ${o.status}">${o.status}</span></td><td style="text-align:left;color:#475467;font-family:var(--sans)">${info}</td></tr>`;
-      }).join("") : '<tr class="empty"><td colspan="11">No orders match</td></tr>');
+      }).join("") : `<tr class="empty"><td colspan="11">${DB === "open" ? "No working orders right now" : "No orders match"}</td></tr>`);
   } else {
-    const rows = trades.sort((a, b) => b.t - a.t).slice(0, 120);
-    html = "<tr><th>Time</th><th>Trade ID</th><th>Order ID</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th><th>Value (USDT)</th><th>Fee</th><th>Liquidity</th></tr>" +
+    const rows = tradeRows(B, keys).slice(0, 120);
+    TRADES_SHOWN = rows;
+    const bu = rows.filter(f => f.side > 0), se = rows.filter(f => f.side < 0), sum = (a, g) => a.reduce((x, f) => x + g(f), 0);
+    const bq = sum(bu, f => f.qty), sq = sum(se, f => f.qty), fee = sum(rows, f => -f.fee), edge = sum(rows, f => f.edge);
+    $("tsum").innerHTML = rows.length ? `<span><b>${rows.length}</b> trades shown</span>` +
+      `<span>bought <b>${qty(bq)}</b> @ ${bq ? px(sum(bu, f => f.px * f.qty) / bq) : "–"}</span><span>sold <b>${qty(sq)}</b> @ ${sq ? px(sum(se, f => f.px * f.qty) / sq) : "–"}</span>` +
+      `<span>value <b>${sum(rows, f => f.value).toLocaleString("en-US", { maximumFractionDigits: 0 })}</b> USDT</span><span>fees/rebate ${sgn(fee)}</span>` +
+      `<span>maker <b>${(100 * rows.filter(f => f.maker).length / rows.length).toFixed(0)}%</b></span><span title="Each trade marked to the current mid: what it has gained or lost since it was made">vs mid now ${sgn(edge)}</span>` : "";
+    html = "<tr><th>Time</th><th>Trade ID</th><th>Order ID</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th><th>Value (USDT)</th><th title=\"Positive = maker rebate received\">Fee / rebate</th><th>Liquidity</th><th>Position after</th><th title=\"Trade marked to the current mid\">vs mid now</th></tr>" +
       (rows.length ? rows.map(f => `<tr class="${!DESKFIRST && !SEENTR.has(f.id) ? "flash" : ""}"><td>${ms(f.t)}</td><td>${f.id}</td><td>${f.oid}</td><td>${stag(f.s)}</td><td>${side(f.side)}</td>` +
-        `<td>${px(f.px)}</td><td>${qty(f.qty)}</td><td>${f.value.toFixed(2)}</td><td>${f.fee.toFixed(4)}</td><td>${f.maker ? "Maker" : "Taker"}</td></tr>`).join("")
-        : '<tr class="empty"><td colspan="10">No trades yet</td></tr>');
+        `<td>${px(f.px)}</td><td>${qty(f.qty)}</td><td>${f.value.toFixed(2)}</td><td>${sgn4(-f.fee)}</td><td>${f.maker ? "Maker" : "Taker"}</td>` +
+        `<td class="${f.after > 0 ? "pos" : f.after < 0 ? "neg" : ""}">${f.after > 0 ? "+" : ""}${qty(f.after)}</td><td>${sgn4(f.edge)}</td></tr>`).join("")
+        : '<tr class="empty"><td colspan="12">No trades match</td></tr>');
   }
   for (const k of ALL) for (const f of B[k].trades) SEENTR.add(f.id);
   DESKFIRST = false;
   $("blot").innerHTML = html;
-  $("tape").innerHTML = "<tr><th>Time</th><th>Price</th><th>Qty</th></tr>" + (D.tape || []).slice().reverse().map(([t, p, q, s]) =>
-    `<tr><td>${ms(t)}</td><td class="${s > 0 ? "pos" : "neg"}">${px(p)}</td><td>${qfmt(q)}</td></tr>`).join("");
+  // ---- time & sales: size filter, buy vs sell volume, large prints
+  const tape = D.tape || [], vb = tape.filter(r => r[3] > 0).reduce((a, r) => a + r[2], 0), vs = tape.filter(r => r[3] < 0).reduce((a, r) => a + r[2], 0), pb = vb + vs > 0 ? vb / (vb + vs) : 0.5;
+  $("tsVol").innerHTML = `<div class="bar"><i style="width:${(100 * pb).toFixed(1)}%;background:var(--bid)"></i><i style="width:${(100 - 100 * pb).toFixed(1)}%;background:var(--ask)"></i></div>` +
+    `<div class="lab"><span class="pos">Buy ${qfmt(vb)}</span><span style="color:var(--muted)">last ${tape.length}</span><span class="neg">${qfmt(vs)} Sell</span></div>`;
+  const shownTape = tape.filter(r => r[2] >= TSMIN).slice().reverse();
+  $("tape").innerHTML = "<tr><th>Time</th><th>Price</th><th>Qty</th></tr>" + (shownTape.length ? shownTape.map(([t, p, q, s]) =>
+    `<tr class="${q >= 10 ? "big" : ""}"><td>${ms(t)}</td><td class="${s > 0 ? "pos" : "neg"}">${px(p)}</td><td>${qfmt(q)}</td></tr>`).join("")
+    : `<tr class="empty"><td colspan="3">No trades ≥ ${TSMIN} in the last ${tape.length}</td></tr>`);
+}
+// trade book rows with the selected filters, the position after each trade (walked back from the current position)
+// and each trade marked to the current mid
+let TSIDE = "all", TLIQ = "all", TSMIN = 0, TRADES_SHOWN = [];
+const sgn4 = v => v == null ? "–" : `<span class="${v >= 0 ? "pos" : "neg"}">${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(4)}</span>`;
+function tradeRows(B, keys) {
+  const out = [];
+  for (const k of keys) {
+    const b = B[k], mark = b.position.mark;
+    let after = b.position.qty;
+    for (const f of b.trades.slice().sort((x, y) => y.t - x.t || (y.id > x.id ? 1 : -1))) {
+      out.push({ ...f, after: Math.round(after * 1e9) / 1e9, edge: f.side * (mark - f.px) * f.qty });
+      after -= f.side * f.qty;
+    }
+  }
+  return out.filter(f => (TSIDE === "all" || (TSIDE === "buy") === (f.side > 0)) && (TLIQ === "all" || (TLIQ === "maker") === f.maker))
+    .sort((a, b) => b.t - a.t);
+}
+function exportTrades() {
+  const head = ["time", "trade_id", "order_id", "strategy", "side", "price", "qty", "value_usdt", "fee_usdt", "liquidity", "position_after", "vs_mid_now_usdt"];
+  const lines = TRADES_SHOWN.map(f => [new Date(f.t).toISOString(), f.id, f.oid, f.s, f.side > 0 ? "BUY" : "SELL", f.px, f.qty, f.value.toFixed(4), f.fee.toFixed(6),
+    f.maker ? "maker" : "taker", f.after, f.edge.toFixed(6)].join(","));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
+  a.download = `trades_${DS}_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 const segPick = (id, attr, set) => document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
   document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle("on", x === b)); set(b.dataset[attr]); renderDesk(LASTDESK);
@@ -666,9 +775,13 @@ segPick("dStrat", "s", v => { DS = v; if (LASTS) price.setOption({ series: ourSe
 segPick("oFilt", "o", v => DO = v);
 segPick("lvSeg", "l", v => { LV = +v; CENTER = true; PREVQ = null; });
 segPick("grpSeg", "g", v => { GRP = +v; CENTER = true; PREVQ = null; });
-document.querySelectorAll(".btabs [role=tab]").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".btabs [role=tab]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
-  DB = b.dataset.b; $("oFilt").style.visibility = DB === "orders" ? "visible" : "hidden"; renderDesk(LASTDESK);
+segPick("tSide", "v", v => TSIDE = v);
+segPick("tLiq", "v", v => TLIQ = v);
+segPick("tsMin", "m", v => TSMIN = +v);
+$("tCsv").onclick = exportTrades;
+document.querySelectorAll(".atabs [role=tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".atabs [role=tab]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+  DB = b.dataset.b; renderDesk(LASTDESK);
 });
 // The chart's working-order lines and fill markers come from the same order book and trade book the desk shows,
 // for the strategy selected there (All: every strategy's fills, X's orders). Working-order history is recorded here,

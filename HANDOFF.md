@@ -246,8 +246,12 @@ Page (`web/trading.html`), top to bottom:
    0.01/0.05/0.10/0.25, running totals per side, bid/ask imbalance meter, size-change flashes, walls = each side's 3
    largest levels ≥ 4× the median, spread in bp, last price with tick arrow; exact top 10 from `desk.depth`, deeper
    levels from the newest heatmap column, i.e. full depth only within ±150 ticks of the mid; our working orders tagged,
-   our own price levels inserted as rows) · positions (all strategies) · order book / trade book tabs with filters · time & sales. A strategy selector
-   (default **X**) drives the books **and** the chart's working-order lines / fill markers. Chart order lines are
+   our own price levels inserted as rows) · **Account** card: strategy selector (default **X**), X signal strip, an
+   always-visible position line, and underline tabs **Positions** (table + detail: exposure, cap usage, break-even incl.
+   fees, P&L split, activity) · **Open orders** · **Order history** (Executed / Cancelled filter) · **Trade book** (side and
+   maker/taker filters, summary strip, position after each trade walked back from the live position, each trade marked
+   to the current mid, CSV export) · **Time & sales** (min-size filter, buy/sell volume bar, ≥ 10 ETH prints highlighted).
+   The strategy selector drives the books **and** the chart's working-order lines / fill markers. Chart order lines are
    accumulated in the page from the order book's OPEN orders on each poll (they rebuild after a reload, ≤ 2 min);
    fill markers come from the trade book.
 2. KPI strip: X headline (net at MM tier + "at retail fees" in bold), C, A, T, adverse selection, decision time.
