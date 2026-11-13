@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NSEQuant · Paper Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<script src="vendor/echarts.min.js"></script>
+<script src="vendor/gsap.min.js"></script>
+<style>
+  :root { --bg:#020403; --panel:rgba(6,16,11,.74); --panel2:rgba(9,24,16,.86); --line:rgba(0,255,136,.12); --line2:rgba(0,255,136,.36);
+    --neon:#00ff88; --down:#ff3d6e; --amber:#ffd166; --ink:#eafff3; --ink2:#a8c9b5; --muted:#6e8f7b;
+    --mono:"JetBrains Mono", ui-monospace, Consolas, monospace; --display:Orbitron, Inter, sans-serif; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink2); }
+  body { font: 14px/1.45 Inter, system-ui, "Segoe UI", Arial, sans-serif; min-height: 100vh; overflow-x: hidden; }
+  .bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+  .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
+  .b1 { width: 620px; height: 620px; background: radial-gradient(circle, rgba(0,255,136,.26), transparent 65%); top: -280px; left: 40%; animation: d1 24s ease-in-out infinite alternate; }
+  .b2 { width: 500px; height: 500px; background: radial-gradient(circle, rgba(57,255,20,.14), transparent 65%); bottom: -240px; right: -120px; animation: d2 28s ease-in-out infinite alternate; }
+  @keyframes d1 { to { transform: translate(120px, 60px) scale(1.15); } }
+  @keyframes d2 { to { transform: translate(-140px, -80px) scale(1.1); } }
+  .grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(0,255,136,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,136,.03) 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse at 60% 15%, #000 15%, transparent 70%); -webkit-mask-image: radial-gradient(ellipse at 60% 15%, #000 15%, transparent 70%); }
+  .main { position: relative; z-index: 1; max-width: 1720px; margin: 0 auto; padding: 20px 28px 32px; display: flex; flex-direction: column; gap: 16px; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+  .brand { font: 600 12px/1 var(--display); letter-spacing: .34em; color: var(--ink2); display: flex; gap: 8px; align-items: center; }
+  .brand i { width: 8px; height: 8px; background: var(--neon); box-shadow: 0 0 10px var(--neon); display: inline-block; }
+  .brand b { color: var(--neon); }
+  h1 { margin: 12px 0 6px; font: 800 34px/1 var(--display); color: var(--ink); letter-spacing: .04em; text-shadow: 0 0 26px rgba(0,255,136,.28); }
+  .subtitle { font: 500 12.5px/1 Inter, sans-serif; letter-spacing: .42em; color: var(--ink2); }
+  .status { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line2); background: rgba(0,255,136,.08); color: var(--neon); font-weight: 600; }
+  .pill.warn { color: var(--amber); border-color: rgba(255,209,102,.4); background: rgba(255,209,102,.08); }
+  .pill.off { color: var(--down); border-color: rgba(255,61,110,.4); background: rgba(255,61,110,.12); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; position: relative; }
+  .dot::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid currentColor; animation: ping 1.6s ease-out infinite; }
+  @keyframes ping { from { transform: scale(.6); opacity: 1; } to { transform: scale(1.9); opacity: 0; } }
+  .card { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; position: relative; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); min-width: 0; transition: border-color .3s, box-shadow .3s; }
+  .card:hover { border-color: var(--line2); box-shadow: 0 0 30px rgba(0,255,136,.14); }
+  .card.hero { border-color: var(--line2); background: linear-gradient(135deg, #0d3321, #072116 55%, #040d08); box-shadow: 0 0 36px rgba(0,255,136,.18); }
+  .label { font-size: 13px; color: var(--ink2); font-weight: 500; }
+  .tag { font: 700 10.5px/1 var(--mono); padding: 3px 6px; border-radius: 5px; margin-right: 6px; }
+  .tA { background: rgba(168,201,181,.15); color: var(--ink2); } .tC { background: rgba(0,255,136,.16); color: var(--neon); } .tT { background: rgba(57,132,255,.16); color: #6aa8ff; }
+  .big { font: 700 30px/1.1 Inter, sans-serif; color: var(--ink); margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
+  .sub { font-size: 12.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .pos { color: var(--neon) !important; } .neg { color: var(--down) !important; }
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 14px; }
+  .row3 { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 14px; }
+  .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+  .head h2 { margin: 0; font-size: 16px; color: var(--ink); font-weight: 650; }
+  .legend { display: flex; gap: 14px; font-size: 12.5px; color: var(--ink2); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .ln { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
+  #price { width: 100%; height: 360px; } #equity { width: 100%; height: 240px; }
+  .steps { display: flex; flex-direction: column; gap: 10px; }
+  .step { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: rgba(0,0,0,.25); }
+  .step h3 { margin: 0 0 6px; font: 700 11px/1 var(--display); letter-spacing: .18em; color: var(--neon); }
+  .eq { font: 600 13px/1.6 var(--mono); color: var(--ink); }
+  .eq span { color: var(--ink2); font-weight: 400; }
+  .probs { display: flex; height: 8px; border-radius: 999px; overflow: hidden; gap: 2px; background: rgba(255,255,255,.05); }
+  .probs i { display: block; height: 100%; transition: width .5s; }
+  .plab { display: flex; justify-content: space-between; margin-top: 5px; font: 600 11px/1 var(--mono); }
+  .quote { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .qbox { border-radius: 10px; padding: 8px 10px; text-align: center; font: 700 16px/1.2 var(--mono); }
+  .qbox small { display: block; font: 500 11px/1.2 Inter, sans-serif; color: var(--ink2); margin-bottom: 3px; }
+  .qbid { background: rgba(0,255,136,.12); color: var(--neon); border: 1px solid rgba(0,255,136,.3); }
+  .qask { background: rgba(255,61,110,.12); color: var(--down); border: 1px solid rgba(255,61,110,.3); }
+  .qbox.pulled { background: rgba(255,209,102,.08); color: var(--amber); border-color: rgba(255,209,102,.35); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  th, td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  th { color: var(--muted); font-weight: 500; }
+  td { color: var(--ink); }
+  .scroll { max-height: 240px; overflow: auto; }
+  .note { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 1350px) { .kpis { grid-template-columns: repeat(3, 1fr); } .row2, .row3 { grid-template-columns: 1fr; } }
+  @media (max-width: 760px) { .main { padding: 16px; } .kpis { grid-template-columns: 1fr; } h1 { font-size: 24px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><div class="grid"></div><div class="blob b1"></div><div class="blob b2"></div></div>
+<main class="main">
+  <header>
+    <div>
+      <div class="brand"><i></i>NSE<b>QUANT</b><i style="transform:rotate(45deg);width:7px;height:7px"></i></div>
+      <h1 id="sym">ETHUSDT PERP</h1>
+      <div class="subtitle">NSQ-MM · PAPER TRADING</div>
+    </div>
+    <div class="status">
+      <span class="pill" id="live"><span class="dot"></span><span id="liveTxt">Connecting</span></span>
+      <span class="pill warn">Simulated orders only · nothing is sent</span>
+      <span class="sub" id="upd">–</span>
+    </div>
+  </header>
+
+  <section class="kpis">
+    <div class="card hero"><div class="label"><span class="tag tC">C</span>NSQ-MM P&amp;L</div><div class="big" id="pC">–</div><div class="sub" id="sC">–</div></div>
+    <div class="card"><div class="label"><span class="tag tA">A</span>Market maker, no model</div><div class="big" id="pA">–</div><div class="sub" id="sA">–</div></div>
+    <div class="card"><div class="label"><span class="tag tT">T</span>TinyML signal taker</div><div class="big" id="pT">–</div><div class="sub" id="sT">–</div></div>
+    <div class="card"><div class="label">Adverse selection · 10 s after fill</div><div class="big" id="mk">–</div><div class="sub" id="mkSub">ticks per fill, NSQ-MM vs no model</div></div>
+    <div class="card"><div class="label">Decision time per book event</div><div class="big" id="dec">–</div><div class="sub" id="decSub">–</div></div>
+  </section>
+
+  <section class="row2">
+    <div class="card">
+      <div class="head"><h2>Live price, NSQ-MM quotes and fills</h2>
+        <div class="legend">
+          <span><i class="ln" style="border-color:#eafff3"></i>Mid</span>
+          <span><i class="ln" style="border-color:#00ff88;border-top-style:dashed"></i>Our bid</span>
+          <span><i class="ln" style="border-color:#ff3d6e;border-top-style:dashed"></i>Our ask</span>
+          <span><svg width="12" height="12"><path d="M6 1 L11 10 L1 10 Z" fill="#00ff88"/></svg>We bought</span>
+          <span><svg width="12" height="12"><path d="M6 11 L11 2 L1 2 Z" fill="#ff3d6e"/></svg>We sold</span>
+        </div></div>
+      <div id="price" role="img" aria-label="Live mid price with NSQ-MM quotes and fills"></div>
+    </div>
+    <div class="card">
+      <div class="head"><h2>The algorithm, live</h2></div>
+      <div class="steps">
+        <div class="step"><h3>1 · PREDICT</h3>
+          <div class="probs"><i id="bD" style="background:#ff3d6e;width:33%"></i><i id="bF" style="background:#3c5a4a;width:34%"></i><i id="bU" style="background:#00ff88;width:33%"></i></div>
+          <div class="plab"><span class="neg" id="lD">▼ –</span><span id="lF">● –</span><span class="pos" id="lU">▲ –</span></div>
+          <div class="sub" style="margin-top:6px">Integer-only 532 B model, next 10 book events</div></div>
+        <div class="step"><h3>2 · PRICE</h3>
+          <div class="eq"><span>mid</span> <b id="eMid">–</b><br><span>+ κ·E[move]</span> <b id="eAlpha">–</b><br><span>− skew·position</span> <b id="eInv">–</b><br><span>= fair value</span> <b id="eFair">–</b></div></div>
+        <div class="step"><h3>3 · QUOTE</h3>
+          <div class="quote"><div class="qbox qbid" id="qB"><small>our bid</small>–</div><div class="qbox qask" id="qA"><small>our ask</small>–</div></div>
+          <div class="sub" style="margin-top:6px" id="qNote">Post-only, keeps queue priority when unchanged</div></div>
+        <div class="step"><h3>4 · PROTECT</h3>
+          <div class="sub" id="risk">–</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="row3">
+    <div class="card">
+      <div class="head"><h2>P&amp;L before fees, this session</h2>
+        <div class="legend"><span><i class="ln" style="border-color:#00ff88"></i>C NSQ-MM</span><span><i class="ln" style="border-color:#9aa5a0"></i>A no model</span><span><i class="ln" style="border-color:#6aa8ff"></i>T taker</span></div></div>
+      <div id="equity" role="img" aria-label="Session P&L of the three strategies"></div>
+    </div>
+    <div class="card">
+      <div class="head"><h2>Recent fills</h2></div>
+      <div class="scroll"><table id="fills"></table></div>
+    </div>
+    <div class="card">
+      <div class="head"><h2>Backtest, full test day</h2></div>
+      <div class="scroll"><table id="bt"></table></div>
+      <div class="note">Parameters tuned on the previous day, tested once. Fees: Bybit VIP0 published rates; “rebate” = illustrative −0.5 bp maker tier.</div>
+    </div>
+  </section>
+</main>
+<script>
+const NEON = "#00ff88", DOWN = "#ff3d6e", INK = "#eafff3", INK2 = "#a8c9b5";
+const $ = id => document.getElementById(id);
+const usd = v => v == null ? "–" : (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2);
+const px = v => v == null ? "–" : Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const TIP = { backgroundColor: "rgba(3,12,8,.95)", borderColor: "rgba(0,255,136,.35)", textStyle: { color: INK }, extraCssText: "border-radius:10px" };
+const price = echarts.init($("price")), equity = echarts.init($("equity"));
+const grad = a => new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: `rgba(0,255,136,${a})` }, { offset: 1, color: "rgba(0,255,136,0)" }]);
+price.setOption({
+  animationDurationUpdate: 300, grid: { left: 70, right: 16, top: 14, bottom: 28 },
+  tooltip: { ...TIP, trigger: "axis" },
+  xAxis: { type: "time", axisLabel: { color: INK2, formatter: "{HH}:{mm}:{ss}", hideOverlap: true }, axisLine: { lineStyle: { color: "rgba(0,255,136,.18)" } }, splitLine: { show: false } },
+  yAxis: { type: "value", scale: true, axisLabel: { color: INK2, formatter: v => v.toFixed(2) }, splitLine: { lineStyle: { color: "rgba(0,255,136,.06)" } } },
+  series: [
+    { id: "mid", name: "Mid", type: "line", showSymbol: false, data: [], lineStyle: { color: INK, width: 2, shadowColor: NEON, shadowBlur: 10 }, areaStyle: { color: grad(.2), origin: "start" } },
+    { id: "qb", name: "Our bid", type: "line", step: "end", showSymbol: false, data: [], connectNulls: false, lineStyle: { color: NEON, width: 1.5, type: "dashed" } },
+    { id: "qa", name: "Our ask", type: "line", step: "end", showSymbol: false, data: [], connectNulls: false, lineStyle: { color: DOWN, width: 1.5, type: "dashed" } },
+    { id: "buy", name: "We bought", type: "scatter", symbol: "triangle", symbolSize: 13, symbolOffset: [0, 12], data: [], z: 6, itemStyle: { color: NEON, shadowColor: NEON, shadowBlur: 12 } },
+    { id: "sell", name: "We sold", type: "scatter", symbol: "triangle", symbolRotate: 180, symbolSize: 13, symbolOffset: [0, -12], data: [], z: 6, itemStyle: { color: DOWN, shadowColor: DOWN, shadowBlur: 12 } },
+  ]
+});
+equity.setOption({
+  animationDurationUpdate: 400, grid: { left: 54, right: 12, top: 10, bottom: 26 },
+  tooltip: { ...TIP, trigger: "axis", valueFormatter: v => usd(v) + " USDT" },
+  xAxis: { type: "time", axisLabel: { color: INK2, formatter: "{HH}:{mm}", hideOverlap: true }, splitLine: { show: false } },
+  yAxis: { type: "value", scale: true, axisLabel: { color: INK2 }, splitLine: { lineStyle: { color: "rgba(0,255,136,.06)" } } },
+  series: [
+    { id: "C", name: "C NSQ-MM", type: "line", showSymbol: false, data: [], lineStyle: { color: NEON, width: 2.5, shadowColor: NEON, shadowBlur: 10 } },
+    { id: "A", name: "A no model", type: "line", showSymbol: false, data: [], lineStyle: { color: "#9aa5a0", width: 2 } },
+    { id: "T", name: "T taker", type: "line", showSymbol: false, data: [], lineStyle: { color: "#6aa8ff", width: 2 } },
+  ]
+});
+
+function pnl(id, s, bps) {
+  const el = $(id); el.textContent = usd(s.gross) + " USDT"; el.className = "big " + (s.gross >= 0 ? "pos" : "neg");
+}
+let fails = 0;
+function render(S) {
+  fails = 0;
+  $("sym").textContent = S.symbol.replace("USDT", "USDT ") + "PERP";
+  $("live").className = "pill"; $("liveTxt").textContent = "Live · " + S.venue;
+  const up = S.uptime_s, hh = Math.floor(up / 3600), mm = Math.floor(up % 3600 / 60);
+  $("upd").textContent = `Updated ${S.updated} · up ${hh}h ${mm}m · ${S.book_events.toLocaleString()} book events · ${S.trades.toLocaleString()} trades`;
+  const st = S.strategies;
+  for (const k of ["C", "A", "T"]) {
+    const s = st[k]; pnl("p" + k, s);
+    $("s" + k).textContent = `after VIP0 fees ${usd(s.net_vip0)} · ${s.fills} fills · pos ${s.position.toFixed(2)}`;
+  }
+  const mC = st.C.markout10s_ticks, mA = st.A.markout10s_ticks;
+  $("mk").innerHTML = mC == null ? "–" : `<span class="${mC >= (mA ?? -1e9) ? "pos" : "neg"}">${mC.toFixed(1)}</span> <span style="font-size:18px;color:#6e8f7b">vs ${mA == null ? "–" : mA.toFixed(1)}</span>`;
+  $("mkSub").textContent = `ticks per fill (higher is better) · n = ${st.C.markout_n} / ${st.A.markout_n}`;
+  $("dec").textContent = S.latency.decide_p50_us.toFixed(1) + " µs";
+  $("decSub").textContent = `p99 ${S.latency.decide_p99_us.toFixed(1)} µs · feed delay p50 ${S.latency.feed_p50_ms.toFixed(0)} ms · simulated order latency ${S.latency_ms_sim} ms`;
+
+  const L = S.last || {};
+  if (L.probs) {
+    const [d, f, u] = L.probs;
+    $("bD").style.width = (100 * d) + "%"; $("bF").style.width = (100 * f) + "%"; $("bU").style.width = (100 * u) + "%";
+    $("lD").textContent = `▼ ${(100 * d).toFixed(0)}%`; $("lF").textContent = `● ${(100 * f).toFixed(0)}%`; $("lU").textContent = `▲ ${(100 * u).toFixed(0)}%`;
+    $("eMid").textContent = px(L.mid); $("eAlpha").textContent = (L.alpha_term >= 0 ? "+" : "") + L.alpha_term.toFixed(3);
+    $("eInv").textContent = (L.inv_term >= 0 ? "+" : "") + L.inv_term.toFixed(3); $("eFair").textContent = px(L.fair);
+    const qb = $("qB"), qa = $("qA");
+    qb.className = "qbox qbid" + (L.quote_bid == null ? " pulled" : ""); qa.className = "qbox qask" + (L.quote_ask == null ? " pulled" : "");
+    qb.innerHTML = `<small>our bid</small>${L.quote_bid == null ? (L.pull_bid ? "PULLED · model says ▼" : "none") : px(L.quote_bid)}`;
+    qa.innerHTML = `<small>our ask</small>${L.quote_ask == null ? (L.pull_ask ? "PULLED · model says ▲" : "none") : px(L.quote_ask)}`;
+    $("qNote").textContent = `Book ${px(L.bid)} / ${px(L.ask)} · post-only · keeps queue priority when unchanged`;
+    const P = S.params.C;
+    $("risk").innerHTML = `Position <b style="color:#eafff3">${st.C.position.toFixed(2)}</b> of ±${(5 * S.unit).toFixed(2)} cap · order-rate cap 10/s per side<br>` +
+      `κ = ${P.kappa}, skew = ${P.inv_skew} tick/unit, half-spread = ${P.half} tick, pull when confidence ≥ ${(100 * P.tau_pull).toFixed(0)}%`;
+  }
+  const ser = S.series;
+  const fC = S.fills.filter(f => f.strategy === "C" && ser.length && f.t >= ser[0][0]);
+  price.setOption({ series: [
+    { id: "mid", data: ser.map(r => [r[0], r[1]]) },
+    { id: "qb", data: ser.map(r => [r[0], r[4]]) },
+    { id: "qa", data: ser.map(r => [r[0], r[5]]) },
+    { id: "buy", data: fC.filter(f => f.side > 0).map(f => [f.t, f.price]) },
+    { id: "sell", data: fC.filter(f => f.side < 0).map(f => [f.t, f.price]) },
+  ] });
+  equity.setOption({ series: ["C", "A", "T"].map(k => ({ id: k, data: S.equity[k] })) });
+  const name = { A: '<span class="tag tA">A</span>', C: '<span class="tag tC">C</span>', T: '<span class="tag tT">T</span>' };
+  $("fills").innerHTML = "<tr><th>Time</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th></tr>" +
+    S.fills.slice().reverse().slice(0, 30).map(f => `<tr><td>${new Date(f.t).toLocaleTimeString()}</td><td>${name[f.strategy]}</td>` +
+      `<td class="${f.side > 0 ? "pos" : "neg"}">${f.side > 0 ? "▲ buy" : "▼ sell"}</td><td>${px(f.price)}</td><td>${f.qty}</td></tr>`).join("");
+  if (S.backtest && !$("bt").dataset.done) {
+    const rows = S.backtest.filter(r => !String(r.strategy).includes("latency 5 "));
+    $("bt").innerHTML = "<tr><th>Market</th><th>Strategy</th><th>Gross</th><th>VIP0 fees</th><th>Rebate</th></tr>" +
+      rows.map(r => `<tr><td>${r.market.split(" ")[0]}</td><td>${r.strategy}</td><td class="${r.gross_pnl >= 0 ? "pos" : "neg"}">${usd(r.gross_pnl)}</td>` +
+        `<td class="${r.net_vip0 >= 0 ? "pos" : "neg"}">${usd(r.net_vip0)}</td><td class="${r["net_rebate_0.5bp"] >= 0 ? "pos" : "neg"}">${usd(r["net_rebate_0.5bp"])}</td></tr>`).join("");
+    $("bt").dataset.done = 1;
+  }
+}
+async function poll() {
+  try { const r = await fetch((new URLSearchParams(location.search).get("state") || "state.json") + "?ts=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw 0; render(await r.json()); }
+  catch (e) { if (++fails > 3) { $("live").className = "pill off"; $("liveTxt").textContent = "Waiting for feed"; } }
+  setTimeout(poll, 700);
+}
+window.addEventListener("resize", () => { price.resize(); equity.resize(); });
+if (typeof gsap !== "undefined" && !document.hidden && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+  gsap.from(".card, header > *", { opacity: 0, y: 22, duration: .8, stagger: .05, ease: "power3.out", clearProps: "transform,opacity" });
+poll();
+</script>
+</body>
+</html>
