@@ -25,6 +25,9 @@ position {qty, avg, mark, unrealised, realised, fees, net, buy_qty, buy_avg, sel
 The chart's working-order lines and fill markers are drawn from `desk.books` for the strategy selected on the desk.
 Order book ladder: exact top 10 from `desk.depth`, deeper levels from the newest `heat` column (full depth within ±150 ticks);
 levels 10/20/50, price grouping, running totals, imbalance meter, size-change flashes, walls, spread in bp, last price from `desk.tape`.
+Account card (all from `desk.books`): Positions (table + exposure, cap usage, break-even, P&L split), Open orders, Order history,
+Trade book (side / maker-taker filters, summary, position after each trade walked back from `position.qty`, each trade vs the
+current mid, CSV export). Time & sales (`desk.tape`): minimum-size filter, buy/sell volume bar, large prints.
 Depth heatmap: `heat` = newest columns `[ts, lowest tick, best bid tick, best ask tick, sizes[301]]` (resting size at each tick
 from the lowest one up, ±150 ticks around the mid, one column per 300 ms) and `trades_heat` = `[t0, t1, tick, buy volume, sell volume]`.
 `state.json` carries only the newest columns; `heat.json` holds the last 2 minutes and is read once when the page opens.

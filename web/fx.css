@@ -55,3 +55,33 @@
 .fx-stats .v { font: 400 34px/1.05 var(--display); color: var(--ink, #0d1626); margin-top: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fx-stats .v small { font: 500 12px "IBM Plex Sans", sans-serif; color: var(--ink2, #475467); margin-left: 4px; }
 @media (max-width: 720px) { .fx-stats .v { font-size: 24px; } .fx-stats .v small { display: block; margin: 2px 0 0; } }
+
+/* ---------- ticker band ---------- */
+.fx-marquee { overflow: hidden; background: #0b1020; color: #c9d3e6; border-bottom: 1px solid #1b2440; position: relative; }
+.fx-marquee::before, .fx-marquee::after { content: ""; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 1; pointer-events: none; }
+.fx-marquee::before { left: 0; background: linear-gradient(90deg, #0b1020, transparent); } .fx-marquee::after { right: 0; background: linear-gradient(270deg, #0b1020, transparent); }
+.fx-mq-track { display: flex; width: max-content; animation: fxMq 46s linear infinite; }
+.fx-marquee:hover .fx-mq-track { animation-play-state: paused; }
+.fx-mq-run { display: flex; align-items: center; white-space: nowrap; padding: 9px 0; }
+.fx-mq-item { display: inline-flex; align-items: baseline; gap: 8px; padding: 0 18px; font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .04em; }
+.fx-mq-item b { color: #6b7a99; font-weight: 600; letter-spacing: .12em; font-size: 10.5px; }
+.fx-mq-item em { font-style: normal; color: #e6ebf5; font-weight: 600; } .fx-mq-item em.pos { color: #34d399; } .fx-mq-item em.neg { color: #f87171; }
+.fx-mq-sep { color: #3b4a6b; font-size: 10px; }
+@keyframes fxMq { to { transform: translateX(-50%); } }
+
+/* ---------- headline words ---------- */
+.fx-words .fx-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; margin-bottom: -.08em; }
+.fx-words .fx-w > span { display: inline-block; transform: translateY(110%) rotate(4deg); transition: transform 1s cubic-bezier(.2,.8,.2,1); transition-delay: calc(var(--i) * 70ms + 120ms); }
+.fx-words.in .fx-w > span { transform: none; }
+
+/* ---------- cursor ring and card spotlight ---------- */
+.fx-cursor { position: fixed; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(31,79,214,.55); pointer-events: none; z-index: 2000;
+  transition: width .25s, height .25s, left .25s, top .25s, background .25s, border-color .25s, opacity .25s; mix-blend-mode: multiply; }
+.fx-cursor.big { width: 64px; height: 64px; left: -32px; top: -32px; background: rgba(31,79,214,.10); border-color: rgba(31,79,214,.8); }
+.fx-cursor.down { width: 26px; height: 26px; left: -13px; top: -13px; }
+.fx-cursor.gone { opacity: 0; }
+.fx-spot { position: relative; isolation: isolate; }
+.fx-spot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s; z-index: 2;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(31,79,214,.08), transparent 45%); }
+.fx-spot:hover::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .fx-mq-track { animation: none; } .fx-words .fx-w > span { transform: none; transition: none; } }
