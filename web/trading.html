@@ -39,7 +39,7 @@
   .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.4s ease-in-out infinite; }
   @keyframes blink { 50% { opacity: .25; } }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
-  .kpis { display: grid; grid-template-columns: 1.5fr repeat(5, 1fr); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .kpis { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   .kpis .card { border: 0; border-radius: 0; border-left: 1px solid var(--line); padding: 16px 18px; }
   .kpis .card:first-child { border-left: 0; }
   .card.hero { background: linear-gradient(90deg, var(--brand-soft), #f9fbff 75%); position: relative; }
@@ -111,6 +111,9 @@
   .qbox small { display: block; font: 500 11px/1.2 var(--sans); color: var(--ink2); margin-bottom: 3px; }
   .qbid { background: var(--bid-soft); color: var(--bid); border: 1px solid #bfe5d1; }
   .qask { background: var(--ask-soft); color: var(--ask); border: 1px solid #f3c4c9; }
+  .zgauge { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--ask-soft), #eef1f5 50%, var(--bid-soft)); }
+  .zgauge .mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line2); }
+  .zgauge .dot { position: absolute; top: -3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ink); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(13,22,38,.3); left: 50%; transition: left .5s; }
   .qbox.pulled { background: var(--amber-soft); color: var(--amber); border-color: #f2d6a8; font-size: 13px; }
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12.5px; }
   th, td { padding: 6px 6px; border-bottom: 1px solid #f0f2f5; text-align: right; }
@@ -211,7 +214,7 @@
   <div class="brand"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="5" fill="#0d1626"/><path d="M6 18 L10.5 8.5 L15 15 L20 7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE<span>Quant</span></div>
   <div class="vsep"></div>
   <div class="instr"><b id="sym">ETHUSDT PERP</b><small>Algorithm X · paper trading</small></div>
-  <nav class="tabs" aria-label="Pages"><a class="on" href="./" aria-current="page">Live paper trading</a><a href="results.html">Results</a></nav>
+  <nav class="tabs" aria-label="Pages"><a class="on" href="./" aria-current="page">Live paper trading</a><a href="hbt/">hftbacktest replay</a><a href="results.html">Results</a></nav>
   <span class="pill" id="live"><span class="dot"></span><span id="liveTxt">Connecting</span></span>
   <span class="sub" id="upd">–</span>
   <span class="grow"></span>
@@ -233,7 +236,7 @@
     <div class="card acct">
       <div class="head"><h2>Account</h2>
         <div class="seg" role="group" aria-label="Strategy shown in positions, orders and trades" id="dStrat">
-          <button class="on" data-s="X">Algorithm X + Model</button><button data-s="C">C · NSQ-MM</button><button data-s="A">A · no model</button><button data-s="T">T · taker</button><button data-s="all">All</button>
+          <button class="on" data-s="X">Algorithm X + Model</button><button data-s="A">A · no model</button><button data-s="all">Both</button>
         </div></div>
       <div class="xsig" id="xsig">–</div>
       <div class="poschip" id="posChip" aria-live="polite"></div>
@@ -263,11 +266,9 @@
   </section>
   <section class="kpis">
     <div class="card hero"><div class="label"><span class="tag tX">X</span>Algorithm X + Model · net, MM fee tier (as tested)</div><div class="big" id="pX">–</div><div class="sub" id="sX">–</div></div>
-    <div class="card"><div class="label"><span class="tag tC">C</span>NSQ-MM P&amp;L</div><div class="big" id="pC">–</div><div class="sub" id="sC">–</div></div>
     <div class="card"><div class="label"><span class="tag tA">A</span>Market maker, no model</div><div class="big" id="pA">–</div><div class="sub" id="sA">–</div></div>
-    <div class="card"><div class="label"><span class="tag tT">T</span>TinyML signal taker</div><div class="big" id="pT">–</div><div class="sub" id="sT">–</div></div>
-    <div class="card"><div class="label">Adverse selection · 10 s after fill</div><div class="big" id="mk">–</div><div class="sub" id="mkSub">ticks per fill, NSQ-MM vs no model</div></div>
-    <div class="card"><div class="label">Decision time per book event</div><div class="big" id="dec">–</div><div class="sub" id="decSub">–</div></div>
+    <div class="card"><div class="label">Adverse selection · 10 s after fill</div><div class="big" id="mk">–</div><div class="sub" id="mkSub">ticks per fill, X vs no model</div></div>
+    <div class="card"><div class="label">Binance signal · ±2–3 % book imbalance</div><div class="big" id="zK">–</div><div class="sub" id="zSub">–</div></div>
   </section>
 
   <section class="row2">
@@ -285,21 +286,21 @@
           <span><i class="ln" style="border-color:#6b7a99;border-top-style:dashed"></i>Our working orders · <b id="qWho">–</b></span>
           <span><svg width="12" height="12"><path d="M6 1 L11 10 L1 10 Z" fill="#0b8457"/></svg><svg width="12" height="12"><path d="M6 11 L11 2 L1 2 Z" fill="#c92f3d"/></svg>Our fills · <b id="fWho">–</b></span>
         </div></div>
-      <div class="well"><div id="price" role="img" aria-label="Depth heatmap: resting order-book size by price over time on a dark background, traded volume as dots, best bid and ask lines, NSQ-MM quotes and fills, and the current book on the right"></div></div>
+      <div class="well"><div id="price" role="img" aria-label="Depth heatmap: resting order-book size by price over time on a dark background, traded volume as dots, best bid and ask lines, our working orders and fills, and the current book on the right"></div></div>
       <div class="chartfoot">Brighter = more resting size (Bybit 200-level book, ±150 ticks around the mid, a column every 300 ms, last 2 min). Dots: traded volume per price per column. Right edge: current book. Scroll on the chart to zoom the price axis, drag to pan. <b id="hov" style="color:var(--ink);font-family:var(--mono);font-weight:500"></b></div>
     </div>
     <div class="card">
-      <div class="head"><h2>C · NSQ-MM, step by step</h2></div>
+      <div class="head"><h2>Algorithm X + Model, step by step</h2></div>
       <div class="steps">
-        <div class="step"><h3>1 · PREDICT</h3>
-          <div class="probs"><i id="bD" style="background:#c92f3d;width:33%"></i><i id="bF" style="background:#b4bcc8;width:34%"></i><i id="bU" style="background:#0b8457;width:33%"></i></div>
-          <div class="plab"><span class="neg" id="lD">▼ –</span><span id="lF">● –</span><span class="pos" id="lU">▲ –</span></div>
-          <div class="sub" style="margin-top:6px">Integer-only 532 B model, next 10 book events</div></div>
+        <div class="step"><h3>1 · SIGNAL</h3>
+          <div class="zgauge"><i class="mid"></i><i class="dot" id="zDot"></i></div>
+          <div class="plab"><span class="neg">−3 sell side heavy</span><span>z</span><span class="pos">buy side heavy +3</span></div>
+          <div class="sub" style="margin-top:6px" id="zNote">Binance ±2–3 % book imbalance, z-scored over 1 h</div></div>
         <div class="step"><h3>2 · PRICE</h3>
-          <div class="eq"><span>mid</span> <b id="eMid">–</b><br><span>+ κ·E[move]</span> <b id="eAlpha">–</b><br><span>− skew·position</span> <b id="eInv">–</b><br><span>= fair value</span> <b id="eFair">–</b></div></div>
+          <div class="eq"><span>mid</span> <b id="eMid">–</b><br><span>+ c₁·z (lean)</span> <b id="eAlpha">–</b><br><span>− skew·position</span> <b id="eInv">–</b><br><span>= fair value</span> <b id="eFair">–</b></div></div>
         <div class="step"><h3>3 · QUOTE</h3>
           <div class="quote"><div class="qbox qbid" id="qB"><small>our bid</small>–</div><div class="qbox qask" id="qA"><small>our ask</small>–</div></div>
-          <div class="sub" style="margin-top:6px" id="qNote">Post-only, keeps queue priority when unchanged</div></div>
+          <div class="sub" style="margin-top:6px" id="qNote">fair ± half-spread · post-only, never better than the best price · re-quoted once a second</div></div>
         <div class="step"><h3>4 · PROTECT</h3>
           <div class="sub" id="risk">–</div></div>
       </div>
@@ -311,9 +312,9 @@
       <h2>Algorithm terminal</h2>
       <span class="cmd">$ python paper_trade.py --symbol ETHUSDT</span>
       <span class="sim" title="Orders are simulated against the live public Bybit feed; nothing is sent to an exchange">Simulated orders · live market data</span>
-      <span class="stat">msgs <b id="tMsgs">0</b> · fills <b id="tFills">0</b> · round trips <b id="tTrips">0</b></span>
+      <span class="stat">signals <b id="tMsgs">0</b> · fills <b id="tFills">0</b></span>
       <div class="tseg" role="group" aria-label="Filter terminal lines">
-        <button class="on" data-f="all">All</button><button data-f="X">Algo X</button><button data-f="C">NSQ-MM</button><button data-f="T">Taker</button><button data-f="fills">Fills &amp; exits</button>
+        <button class="on" data-f="all">All</button><button data-f="fills">Fills only</button>
       </div>
       <button class="tbtn" id="tPause" aria-pressed="false">Pause</button>
     </div>
@@ -323,17 +324,17 @@
   <section class="row3">
     <div class="card">
       <div class="head"><h2>P&amp;L before fees, this session</h2>
-        <div class="legend"><span><i class="ln" style="border-color:#0d1626"></i>Algorithm X + Model</span><span><i class="ln" style="border-color:#1f4fd6"></i>C NSQ-MM</span><span><i class="ln" style="border-color:#9aa6b8"></i>A no model</span><span><i class="ln" style="border-color:#8b5cd6"></i>T taker</span></div></div>
-      <div id="equity" role="img" aria-label="Session P&L of the three strategies"></div>
+        <div class="legend"><span><i class="ln" style="border-color:#0d1626"></i>Algorithm X + Model</span><span><i class="ln" style="border-color:#9aa6b8"></i>A no model</span></div></div>
+      <div id="equity" role="img" aria-label="Session P&L of algorithm X and the no-model baseline"></div>
     </div>
     <div class="card">
       <div class="head"><h2>Recent fills</h2></div>
       <div class="scroll"><table id="fills"></table></div>
     </div>
     <div class="card">
-      <div class="head"><h2>Backtest, full test day</h2></div>
+      <div class="head"><h2>Backtest · algorithm X, 9 out-of-sample days</h2></div>
       <div class="scroll"><table id="bt"></table></div>
-      <div class="note">Parameters tuned on the previous day, tested once. Fees: Bybit VIP0 published rates; “rebate” = illustrative −0.5 bp maker tier.</div>
+      <div class="note">ETHUSDT, settings chosen on 9 Nov and frozen; HFT-firm profile with the −0.5 bp maker rebate. Without the rebate the 9 days lose money (before-fees column). Full detail on the Results page.</div>
     </div>
   </section>
 </main>
@@ -447,9 +448,7 @@ equity.setOption({
   yAxis: { type: "value", scale: true, axisLabel: { color: INK2 }, splitLine: { lineStyle: { color: GRID } } },
   series: [
     { id: "X", name: "Algorithm X + Model", type: "line", showSymbol: false, data: [], lineStyle: { color: INK, width: 2.4 } },
-    { id: "C", name: "C NSQ-MM", type: "line", showSymbol: false, data: [], lineStyle: { color: BRAND, width: 2.2 } },
     { id: "A", name: "A no model", type: "line", showSymbol: false, data: [], lineStyle: { color: "#9aa6b8", width: 1.8 } },
-    { id: "T", name: "T taker", type: "line", showSymbol: false, data: [], lineStyle: { color: "#8b5cd6", width: 1.8 } },
   ]
 });
 
@@ -457,6 +456,32 @@ function pnl(id, s, bps) {
   const el = $(id); el.textContent = usd(s.gross) + " USDT"; el.className = "big " + (s.gross >= 0 ? "pos" : "neg");
 }
 let fails = 0;
+// The dashboard shows algorithm X and the no-model baseline A only (C and T still run in the engine, not shown here).
+const SHOW = ["X", "A"];
+function stepsX(S, X, XP) {
+  const g = X.signal, mid = (S.last || {}).mid, B = S.desk && S.desk.books && S.desk.books.X;
+  const z = g.z, ok = z != null && g.warmup_s_left === 0;
+  $("zDot").style.left = `${50 + 50 * Math.max(-1, Math.min(1, (z || 0) / 3))}%`;
+  $("zK").innerHTML = z == null ? "–" : `<span class="${z >= 0 ? "pos" : "neg"}">${z >= 0 ? "+" : ""}${z.toFixed(2)}</span><span style="font-size:18px;color:#8590a2"> z</span>`;
+  $("zSub").textContent = g.warmup_s_left > 0 ? `warming up · ${Math.ceil(g.warmup_s_left / 60)} min left` : z == null ? `collecting snapshots (${g.snapshots} of 4)` :
+    `imbalance ${(g.imbalance >= 0 ? "+" : "") + g.imbalance.toFixed(3)} · ${g.snapshots} snapshots in the 1 h window`;
+  $("zNote").textContent = ok ? `Binance ±2–3 % imbalance ${(g.imbalance >= 0 ? "+" : "") + g.imbalance.toFixed(3)} · z ${(z >= 0 ? "+" : "") + z.toFixed(2)} · a new reading every 30 s`
+    : "Binance ±2–3 % book imbalance, z-scored over 1 h · not ready yet, X sits out";
+  if (mid == null) return;
+  const bpU = mid * 1e-4, lean = ok ? XP.c1_bp * z * bpU : 0, inv = -XP.skew_bp * bpU * X.position / XP.unit, fair = mid + lean + inv;
+  $("eMid").textContent = px(mid);
+  $("eAlpha").textContent = (lean >= 0 ? "+" : "−") + Math.abs(lean).toFixed(3) + (ok ? ` (${(XP.c1_bp * z).toFixed(2)} bp)` : " (no signal)");
+  $("eInv").textContent = (inv >= 0 ? "+" : "−") + Math.abs(inv).toFixed(3);
+  $("eFair").textContent = px(fair);
+  const w = { 1: null, "-1": null };
+  if (B) for (const o of B.orders) if (o.status === "OPEN") w[o.side] = o.px;
+  const cap = XP.max_pos * XP.unit, why = (s) => !ok ? "none · sitting out" : (s > 0 ? X.position >= cap - 1e-9 : X.position <= -cap + 1e-9) ? "none · position cap" : "none · placing";
+  $("qB").className = "qbox qbid" + (w[1] == null ? " pulled" : ""); $("qA").className = "qbox qask" + (w[-1] == null ? " pulled" : "");
+  $("qB").innerHTML = `<small>our bid</small>${w[1] == null ? why(1) : px(w[1])}`;
+  $("qA").innerHTML = `<small>our ask</small>${w[-1] == null ? why(-1) : px(w[-1])}`;
+  $("risk").innerHTML = `Position <b style="color:#0d1626">${X.position >= 0 ? "+" : ""}${X.position.toFixed(2)} ETH</b> of ±${cap} ETH cap · sits out when the Binance signal is unavailable<br>` +
+    `c₁ = ${XP.c1_bp} bp per z · half-spread = ${XP.half_bp} bp · skew = ${XP.skew_bp} bp per lot · ${XP.profile} profile, maker ${XP.maker_bps} bp`;
+}
 function render(S) {
   fails = 0;
   $("sym").textContent = S.symbol.replace("USDT", "USDT ") + "PERP";
@@ -464,10 +489,8 @@ function render(S) {
   const up = S.uptime_s, hh = Math.floor(up / 3600), mm = Math.floor(up % 3600 / 60);
   $("upd").textContent = `Updated ${S.updated} · up ${hh}h ${mm}m · ${S.book_events.toLocaleString()} book events · ${S.trades.toLocaleString()} trades`;
   const st = S.strategies;
-  for (const k of ["C", "A", "T"]) {
-    const s = st[k]; pnl("p" + k, s);
-    $("s" + k).textContent = `after VIP0 fees ${usd(s.net_vip0)} · ${s.fills} fills · pos ${s.position.toFixed(2)}`;
-  }
+  pnl("pA", st.A);
+  $("sA").textContent = `before fees · after VIP0 fees ${usd(st.A.net_vip0)} · ${st.A.fills} fills · pos ${st.A.position.toFixed(2)}`;
   const X = st.X, XP = S.x;
   if (X) {
     const el = $("pX"), g = X.signal;
@@ -485,28 +508,10 @@ function render(S) {
         ` → fair value ${lean >= 0 ? "+" : ""}${lean.toFixed(2)} bp vs mid → ${act} · ${g.snapshots} snapshots in the 1 h window`;
     }
   }
-  const mC = st.C.markout10s_ticks, mA = st.A.markout10s_ticks;
-  $("mk").innerHTML = mC == null ? "–" : `<span class="${mC >= (mA ?? -1e9) ? "pos" : "neg"}">${mC.toFixed(1)}</span> <span style="font-size:18px;color:#8590a2">vs ${mA == null ? "–" : mA.toFixed(1)}</span>`;
-  $("mkSub").textContent = `ticks per fill (higher is better) · n = ${st.C.markout_n} / ${st.A.markout_n}`;
-  $("dec").textContent = S.latency.decide_p50_us.toFixed(1) + " µs";
-  $("decSub").textContent = `p99 ${S.latency.decide_p99_us.toFixed(1)} µs · feed delay p50 ${S.latency.feed_p50_ms.toFixed(0)} ms · simulated order latency ${S.latency_ms_sim} ms`;
-
-  const L = S.last || {};
-  if (L.probs) {
-    const [d, f, u] = L.probs;
-    $("bD").style.width = (100 * d) + "%"; $("bF").style.width = (100 * f) + "%"; $("bU").style.width = (100 * u) + "%";
-    $("lD").textContent = `▼ ${(100 * d).toFixed(0)}%`; $("lF").textContent = `● ${(100 * f).toFixed(0)}%`; $("lU").textContent = `▲ ${(100 * u).toFixed(0)}%`;
-    $("eMid").textContent = px(L.mid); $("eAlpha").textContent = (L.alpha_term >= 0 ? "+" : "") + L.alpha_term.toFixed(3);
-    $("eInv").textContent = (L.inv_term >= 0 ? "+" : "") + L.inv_term.toFixed(3); $("eFair").textContent = px(L.fair);
-    const qb = $("qB"), qa = $("qA");
-    qb.className = "qbox qbid" + (L.quote_bid == null ? " pulled" : ""); qa.className = "qbox qask" + (L.quote_ask == null ? " pulled" : "");
-    qb.innerHTML = `<small>our bid</small>${L.quote_bid == null ? (L.pull_bid ? "PULLED · model says ▼" : "none") : px(L.quote_bid)}`;
-    qa.innerHTML = `<small>our ask</small>${L.quote_ask == null ? (L.pull_ask ? "PULLED · model says ▲" : "none") : px(L.quote_ask)}`;
-    $("qNote").textContent = `Book ${px(L.bid)} / ${px(L.ask)} · post-only · keeps queue priority when unchanged`;
-    const P = S.params.C;
-    $("risk").innerHTML = `Position <b style="color:#0d1626">${st.C.position.toFixed(2)}</b> of ±${(5 * S.unit).toFixed(2)} cap · order-rate cap 10/s per side<br>` +
-      `κ = ${P.kappa}, skew = ${P.inv_skew} tick/unit, half-spread = ${P.half} tick, pull when confidence ≥ ${(100 * P.tau_pull).toFixed(0)}%`;
-  }
+  const mX = X ? X.markout10s_ticks : null, mA = st.A.markout10s_ticks;
+  $("mk").innerHTML = mX == null ? "–" : `<span class="${mX >= (mA ?? -1e9) ? "pos" : "neg"}">${mX.toFixed(1)}</span> <span style="font-size:18px;color:#8590a2">vs ${mA == null ? "–" : mA.toFixed(1)}</span>`;
+  $("mkSub").textContent = `ticks per fill (higher is better) · X vs no model · n = ${X ? X.markout_n : 0} / ${st.A.markout_n}`;
+  if (X) stepsX(S, X, XP);
   const ser = S.series;
   LASTS = S;
   if (S.tick) TICK = S.tick;
@@ -514,13 +519,11 @@ function render(S) {
   HIMG = buildHeat();
   renderDesk(S.desk);
   trackQuotes(S);
-  const hc = S.strategies.C;
-  const Lm = S.last || {}, sp = Lm.ask != null && Lm.bid != null ? Lm.ask - Lm.bid : null;
+  const Lm = S.last || {}, sp = Lm.ask != null && Lm.bid != null ? Lm.ask - Lm.bid : null, zz = X && X.signal.z;
   MQ.set([["ETHUSDT", px(Lm.mid)], ["SPREAD", sp == null ? "–" : sp.toFixed(2)],
     ...(X ? [["ALGO X NET", usd(X.net) + " USDT", X.net >= 0 ? "pos" : "neg"], ["X AT RETAIL FEES", usd(X.net_vip0) + " USDT", X.net_vip0 >= 0 ? "pos" : "neg"]] : []),
-    ["NSQ-MM P&L", usd(hc.gross) + " USDT", hc.gross >= 0 ? "pos" : "neg"],
-    ["FILLS", hc.fills.toLocaleString()], ["POSITION", hc.position.toFixed(2)], ["DECISION", S.latency.decide_p50_us.toFixed(1) + " µs"],
-    ["MODEL", "532 B int8"], ["BOOK EVENTS", S.book_events.toLocaleString()], ["TRADES SEEN", S.trades.toLocaleString()],
+    ...(X ? [["X FILLS", X.fills.toLocaleString()], ["X POSITION", X.position.toFixed(2) + " ETH"], ["BINANCE Z", zz == null ? "warming up" : (zz >= 0 ? "+" : "") + zz.toFixed(2)]] : []),
+    ["NO-MODEL BASELINE", usd(st.A.gross) + " USDT", st.A.gross >= 0 ? "pos" : "neg"], ["BOOK EVENTS", S.book_events.toLocaleString()], ["TRADES SEEN", S.trades.toLocaleString()],
     ["BACKTEST · X ETH 9 DAYS", "+727.03 USDT", "pos"], ["ORDERS", "SIMULATED"]]);
   FX.ready();
   const prof = [], last = HC[HC.length - 1];
@@ -551,17 +554,21 @@ function render(S) {
   ] });
   applyZoom();
   renderTerm(S.log);
-  equity.setOption({ series: ["X", "C", "A", "T"].map(k => ({ id: k, data: S.equity[k] || [] })) });
-  const name = { A: '<span class="tag tA">A</span>', C: '<span class="tag tC">C</span>', T: '<span class="tag tT">T</span>' };
+  equity.setOption({ series: SHOW.map(k => ({ id: k, data: S.equity[k] || [] })) });
+  const name = { A: '<span class="tag tA">A</span>', X: '<span class="tag tX">X</span>' };
   $("fills").innerHTML = "<tr><th>Time</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th></tr>" +
-    S.fills.slice().reverse().slice(0, 30).map(f => `<tr><td>${new Date(f.t).toLocaleTimeString()}</td><td>${name[f.strategy]}</td>` +
+    S.fills.filter(f => SHOW.includes(f.strategy)).reverse().slice(0, 30).map(f => `<tr><td>${new Date(f.t).toLocaleTimeString()}</td><td>${name[f.strategy]}</td>` +
       `<td class="${f.side > 0 ? "pos" : "neg"}">${f.side > 0 ? "▲ buy" : "▼ sell"}</td><td>${px(f.price)}</td><td>${f.qty}</td></tr>`).join("");
-  if (S.backtest && !$("bt").dataset.done) {
-    const rows = S.backtest.filter(r => !String(r.strategy).includes("latency 5 "));
-    $("bt").innerHTML = "<tr><th>Market</th><th>Strategy</th><th>Gross</th><th>VIP0 fees</th><th>Rebate</th></tr>" +
-      rows.map(r => `<tr><td>${r.market.split(" ")[0]}</td><td>${r.strategy}</td><td class="${r.gross_pnl >= 0 ? "pos" : "neg"}">${usd(r.gross_pnl)}</td>` +
-        `<td class="${r.net_vip0 >= 0 ? "pos" : "neg"}">${usd(r.net_vip0)}</td><td class="${r["net_rebate_0.5bp"] >= 0 ? "pos" : "neg"}">${usd(r["net_rebate_0.5bp"])}</td></tr>`).join("");
+  if (!$("bt").dataset.done) {
     $("bt").dataset.done = 1;
+    fetch("results_data.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then(R => {
+      if (!R) { $("bt").innerHTML = '<tr class="empty"><td>Backtest data not found</td></tr>'; return; }
+      const days = R.days.filter(r => r.market === "ETHUSDT" && r.strategy === "X"), s = R.days_summary.find(r => r.market === "ETHUSDT" && r.strategy === "X");
+      const c = v => `<td class="${v >= 0 ? "pos" : "neg"}">${usd(v)}</td>`;
+      $("bt").innerHTML = "<tr><th>Day</th><th>Fills</th><th>Before fees</th><th>Rebate</th><th>Net</th></tr>" +
+        days.map(r => `<tr><td>${r.day.slice(5)}</td><td>${r.fills.toLocaleString()}</td>${c(r.gross_pnl)}${c(r.rebate)}${c(r.net_pnl)}</tr>`).join("") +
+        (s ? `<tr><td><b>Total</b></td><td>${s.positive_days}/${s.days} up</td>${c(s.gross_total)}${c(s.net_total - s.gross_total)}<td class="${s.net_total >= 0 ? "pos" : "neg"}"><b>${usd(s.net_total)}</b></td></tr>` : "");
+    }).catch(() => { $("bt").dataset.done = ""; });
   }
 }
 // ---------------------------------------------------------------- trading desk: depth, positions, order book, trade book, tape
@@ -594,7 +601,7 @@ function renderBook(D, B) {
   if (!dp) return;
   const G = Math.max(1, Math.round(GRP / TICK)), bucket = (side, tk) => side > 0 ? Math.floor(tk / G) * G : Math.ceil(tk / G) * G;
   const work = {};                                   // our working limit orders, by side + bucket
-  for (const k of ["X", "C", "A"].filter(k => B[k])) for (const o of B[k].orders) if (openSt(o) && o.px != null) {
+  for (const k of SHOW.filter(k => B[k])) for (const o of B[k].orders) if (openSt(o) && o.px != null) {
     const key = (o.side > 0 ? "b" : "a") + bucket(o.side, Math.round(o.px / TICK));
     (work[key] = work[key] || []).push(o);
   }
@@ -656,7 +663,7 @@ function renderBook(D, B) {
 function renderDesk(D) {
   if (!D) return;
   LASTDESK = D;
-  const B = D.books, ALL = ["X", "C", "A", "T"].filter(k => B[k]), keys = DS === "all" ? ALL : B[DS] ? [DS] : ["C"];
+  const B = D.books, ALL = SHOW.filter(k => B[k]), keys = DS === "all" ? ALL : B[DS] ? [DS] : ["X"];
   renderBook(D, B);
   // ---- position chip: the selected strategy, always visible; flashes when it trades
   const pos = k => B[k].position, flashK = {};
@@ -802,10 +809,10 @@ function trackQuotes(S) {
 }
 function ourSeries(S) {
   const B = S.desk ? S.desk.books : {}, t0 = HC.length ? HC[0][0] : 0;
-  const ks = DS === "all" ? Object.keys(B) : [DS], q = QH[DS === "all" ? "X" : DS] || [];
+  const ks = DS === "all" ? SHOW : [DS], q = QH[DS === "all" ? "X" : DS] || [];
   const f = ks.flatMap(k => B[k] ? B[k].trades : []).filter(x => x.t >= t0);
-  $("qWho").textContent = DS === "all" ? SNAME.X : DS === "T" ? "none (T uses market orders)" : SNAME[DS];
-  $("fWho").textContent = DS === "all" ? "all strategies" : SNAME[DS];
+  $("qWho").textContent = DS === "all" ? SNAME.X : SNAME[DS];
+  $("fWho").textContent = DS === "all" ? "X and A" : SNAME[DS];
   return [
     { id: "qb", data: q.map(r => [r[0], r[1]]) },
     { id: "qa", data: q.map(r => [r[0], r[2]]) },
@@ -825,7 +832,7 @@ const tcount = { msgs: 0, fills: 0, trips: 0 };
 const WHO = { M: "MODEL", C: "NSQ-MM", T: "TAKER", X: "ALGO X" };
 const esc = x => String(x).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 const tclock = t => { const d = new Date(t); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
-const tkeep = e => TF === "all" || (TF === "fills" ? ["FILL", "EXIT", "FLAT"].includes(e.k) : e.s === TF);
+const tkeep = e => SHOW.includes(e.s) && (TF === "all" || ["FILL", "EXIT", "FLAT"].includes(e.k));
 function tline(e) {
   const kc = e.k === "FILL" ? (/\bBUY\b/.test(e.m) ? "k-buy" : "k-sell") : "k-" + e.k;
   return `<div class="tl ${e.k}${e.seq > NEWSEQ ? " new" : ""}"><span class="t">${tclock(e.t)}</span>  <span class="w">${WHO[e.s] || e.s}</span> <span class="k ${kc}">${e.k}</span> <span class="m">${esc(e.m)}</span></div>`;
@@ -841,8 +848,9 @@ function renderTerm(entries) {
   if (entries && entries.length && entries[entries.length - 1].seq < LOGSEQ) { LOG = []; LOGSEQ = 0; NEWSEQ = 0; return renderTerm(entries); }   // engine restarted
   if (!add.length) return;
   for (const e of add) {
-    if (["PLACE", "AMEND", "CANCEL", "ENTER"].includes(e.k) || (e.s === "T" && e.k === "EXIT")) tcount.msgs++;
-    if (["FILL", "EXIT"].includes(e.k) && (e.s === "C" || e.s === "X") || (e.s === "T" && e.k !== "ENTER" && e.k !== "EXIT")) tcount.fills++;
+    if (!SHOW.includes(e.s)) continue;
+    if (e.k === "SIGNAL") tcount.msgs++;
+    if (["FILL", "EXIT"].includes(e.k)) tcount.fills++;
     if (e.k === "FLAT") tcount.trips++;
   }
   LOGSEQ = add[add.length - 1].seq; LOG.push(...add);

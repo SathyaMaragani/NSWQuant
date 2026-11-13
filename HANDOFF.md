@@ -275,6 +275,18 @@ Page (`web/trading.html`), top to bottom:
 
 ---
 
+## 10b. Algorithm X on hftbacktest (replay)
+
+- Own env: `hbt/.venv` (Python 3.12, hftbacktest 2.4.4; the project itself stays on 3.10). Git-ignored: `hbt/.venv/`,
+  `hbt/data/`, `results/hbt/`.
+- `hbt/convert.py DAY HH:MM HH:MM` → Bybit ob200 archive + trades → hftbacktest events for one window (snapshot rows
+  carry side flags, unlike the bundled `bybithistmktdata` converter). Book verified identical to ours at 100 % of samples.
+- `hbt/run_x.py DAY HH:MM HH:MM` → X with frozen settings + the same Binance z; power-prob queue (n=3), 1 ms latency, no
+  partial fills, maker −0.5 bp → `results/hbt/x_replay.json`, `heat.bin`, `trades.bin`.
+- Viewer `web/hbt.html`; serve by copying it as `results/paper/hbt/index.html` with the three data files beside it →
+  http://127.0.0.1:8770/hbt/ (no restart). Result for 12 Nov 14:00–15:00 UTC (busiest hour by trade count): 1,158 fills,
+  −32.29 USDT net (−90.19 at retail fees). A mechanics demo, not a performance test.
+
 ## 11. Open work — where things stopped
 
 **A. Retail-fee strategy research (stopped by the user mid-run).** Goal stated by the user: "make it profitable for
