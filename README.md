@@ -23,6 +23,8 @@ Trading desk: `desk {depth {bp, bq, ap, aq} (10 levels), tape [[ts, price, qty, 
 q (queue ahead; >= 1e11 = behind the visible book), note}], trades [{id, oid, s, t, side, px, qty, fee, maker, value}],
 position {qty, avg, mark, unrealised, realised, fees, net, buy_qty, buy_avg, sell_qty, sell_avg}, open, n_orders, n_trades}`.
 The chart's working-order lines and fill markers are drawn from `desk.books` for the strategy selected on the desk.
+Order book ladder: exact top 10 from `desk.depth`, deeper levels from the newest `heat` column (full depth within ±150 ticks);
+levels 10/20/50, price grouping, running totals, imbalance meter, size-change flashes, walls, spread in bp, last price from `desk.tape`.
 Depth heatmap: `heat` = newest columns `[ts, lowest tick, best bid tick, best ask tick, sizes[301]]` (resting size at each tick
 from the lowest one up, ±150 ticks around the mid, one column per 300 ms) and `trades_heat` = `[t0, t1, tick, buy volume, sell volume]`.
 `state.json` carries only the newest columns; `heat.json` holds the last 2 minutes and is read once when the page opens.
