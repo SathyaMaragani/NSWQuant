@@ -100,6 +100,7 @@ class Exchange:
         self.msgs = []
         self.messages = self.rejected = 0
         self.signal = None                     # set by the runner per book event: (move, pull_bid, pull_ask, prob)
+        self.aux = None                        # optional extra per-event features (e.g. deep-book imbalance z-scores)
         self.strategy = None
 
     # ----- the strategy-facing API ------------------------------------------
@@ -320,7 +321,46 @@ class Exchange:
             self.strategy.on_book(self)
 
 
-def replay(ex, strategy, ts, B, trades, signals, eq_every_ms=1000):
+def book_imbalance_z(ts, R, windows=(600, 3600)):
+    """Causal z-score of (total bid size - total ask size) over every published level (R cols 21, 22), sampled each
+    second; an event at time t sees only seconds that had fully completed. Returns (n, len(windows))."""
+    import pandas as pd
+    x = pd.Series(R[:, 21] - R[:, 22], index=pd.to_datetime(ts, unit="ms"))
+    s = x.resample("1s").last().ffill()
+    sec = pd.to_datetime((ts // 1000 - 1) * 1000, unit="ms")
+    cols = []
+    for w in windows:
+        r = s.rolling(w, min_periods=w // 4)
+        cols.append(((s - r.mean()) / r.std()).reindex(sec).to_numpy())
+    return np.column_stack(cols)
+
+
+def binance_imbalance_z(ts, symbol, day, window="1h", lag_s=1):
+    """Cross-venue signal from Binance's public bookDepth archive (USD-M futures, ~30 s snapshots of the size resting
+    within +-0.2..5 % of the price): imbalance (bid - ask) / (bid + ask) in the +-2.5 % band (mean of the 2 % and 3 %
+    bands) and the +-1 % band, z-scored over `window`, usable `lag_s` after each snapshot. Returns (n, 2); NaN if absent."""
+    import zipfile
+    import pandas as pd
+    f = ROOT / "raw" / "binance" / "bookDepth" / f"{symbol}-bookDepth-{day}.zip"
+    if not f.exists():
+        return np.full((len(ts), 2), np.nan)
+    z = zipfile.ZipFile(f)
+    d = pd.read_csv(z.open(z.namelist()[0]))
+    d["timestamp"] = pd.to_datetime(d["timestamp"])                    # UTC, like the Bybit timestamps
+    p = d.pivot_table(index="timestamp", columns="percentage", values="depth")
+    bands = [((p[-2.0] + p[-3.0]) / 2, (p[2.0] + p[3.0]) / 2), (p[-1.0], p[1.0])]
+    at = pd.to_datetime(ts, unit="ms")
+    cols = []
+    for b, a in bands:
+        x = (b - a) / (b + a)
+        r = x.rolling(window, min_periods=4)
+        zz = ((x - r.mean()) / r.std())
+        zz.index = zz.index + pd.Timedelta(seconds=lag_s)
+        cols.append(zz.reindex(at, method="ffill").to_numpy())
+    return np.column_stack(cols)
+
+
+def replay(ex, strategy, ts, B, trades, signals, eq_every_ms=1000, aux=None):
     """Merge book events and trades in time order (trades at a timestamp before the snapshot that reflects them)."""
     tts, tpx, tqty, tside = trades
     move, pull_b, pull_a, prob = signals
@@ -335,6 +375,7 @@ def replay(ex, strategy, ts, B, trades, signals, eq_every_ms=1000):
             k += 1; ex.on_trade(int(tts[j]), int(tpx[j]), float(tqty[j]), int(tside[j]), k); j += 1
         k += 1
         ex.signal = (move[i], pull_b[i], pull_a[i], prob[i] if prob is not None else None)
+        ex.aux = aux[i] if aux is not None else None
         ex.on_book(t, bp_[i], bq_[i], ap_[i], aq_[i], k)
         if t - last >= eq_every_ms:
             eq_t.append(t); eq_v.append(ex.equity()); last = t
@@ -378,6 +419,11 @@ def run_market(name, quick):
     Dtail, Dtest = prep(R_tr[tail0:], ts_tr[tail0:], tick), prep(R_te, ts_te, tick)
     T_tail = slice_trades(load_trades(ROOT / "raw" / "trades" / trd_tr, fmt, tick), Dtail["ts"][0], Dtail["ts"][-1])
     T_test = slice_trades(load_trades(ROOT / "raw" / "trades" / trd_te, fmt, tick), Dtest["ts"][0], Dtest["ts"][-1])
+    bsym = name.split()[0]                     # Binance USD-M symbol for the cross-venue signal
+    Ztail = np.column_stack([book_imbalance_z(ts_tr, R_tr), binance_imbalance_z(ts_tr, bsym, "2026-11-09")])[tail0:]
+    Ztest = np.column_stack([book_imbalance_z(ts_te, R_te), binance_imbalance_z(ts_te, bsym, "2026-11-10")])
+    print(f"  aux signals: Bybit 200-level z (10 min, 1 h), Binance +-2.5 % and +-1 % z (1 h); "
+          f"Binance coverage {np.isfinite(Ztest[:, 2]).mean():.0%} of test events")
     as_lists = lambda D: tuple([list(r) for r in side] for side in D["B"])
     Btail, Btest = as_lists(Dtail), as_lists(Dtest)
 
@@ -385,16 +431,16 @@ def run_market(name, quick):
         conf = prob.max(1)[prob.argmax(1) != 1]
         return (*signals(prob, class_move, np.quantile(conf, q) if q else 9.0), prob)
 
-    def one(D, B, T, prob, prof, strat_cls, kw, q, label):
+    def one(D, B, T, prob, prof, strat_cls, kw, q, label, aux=None):
         ex = Exchange(prof, tick)
         st = strat_cls(size=unit, **kw)
-        eq_t, eq_v = replay(ex, st, D["ts"], B, T, sig(prob, q))
+        eq_t, eq_v = replay(ex, st, D["ts"], B, T, sig(prob, q), aux=aux)
         r = report(ex, label, D["ts"], D["mid"], eq_v)
         r.update(profile=prof.name, market=name, q=q, **{k: v for k, v in kw.items()})
         return r, (eq_t, eq_v)
 
     rm, rt = FEES[name]
-    rows, tunes, curves = [], [], {}
+    rows, tunes, curves, hft_kw = [], [], {}, {}
     for prof in profiles(rm, rt).values():
         t0 = time.time()
         grid = []
@@ -410,42 +456,51 @@ def run_market(name, quick):
                     for imb in (0.0, 0.5):
                         grid.append(("Q", S.QueueAwareMM, dict(half=0.5, inv_skew=inv, kappa=kappa, tau=tau, imb_min=imb,
                                                                max_ahead=0.5, guard=prof.react_to_trades), None))
+        for half in (0.25, 0.5, 1.0):              # O: hftbacktest imbalance market maker, prices in bp of the mid
+            for skew in (0.02, 0.1):
+                for c1, zcol in ((0.0, 0), (0.5, 0), (0.5, 1), (2.0, 0), (2.0, 1)):   # O: Bybit's own 200-level book
+                    grid.append(("O", S.ImbalanceMM, dict(half_bp=half, c1_bp=c1, skew_bp=skew, zcol=zcol), None))
+                for c1, zcol in ((0.5, 2), (2.0, 2), (5.0, 2), (2.0, 3), (5.0, 3)):   # X: Binance +-2.5 % / +-1 % bands
+                    grid.append(("X", S.ImbalanceMM, dict(half_bp=half, c1_bp=c1, skew_bp=skew, zcol=zcol), None))
         for q in (0.9, 0.97, 0.995):
             for hold in (10, 30):
                 grid.append(("T", S.SignalTaker, dict(hold=hold), q))
         res = []
         for key, cls, kw, q in grid:
-            r, _ = one(Dtail, Btail, T_tail, p_tail, prof, cls, kw, q, key)
+            r, _ = one(Dtail, Btail, T_tail, p_tail, prof, cls, kw, q, key, aux=Ztail)
             res.append(r)
         tune = pd.DataFrame(res); tunes.append(tune)
-        for key, cls in (("A", S.QuotingMM), ("C", S.NSQMM), ("Q", S.QueueAwareMM), ("T", S.SignalTaker)):
+        for key, cls in (("A", S.QuotingMM), ("C", S.NSQMM), ("Q", S.QueueAwareMM), ("O", S.ImbalanceMM), ("X", S.ImbalanceMM),
+                         ("T", S.SignalTaker)):
             best = tune[tune.strategy == key].sort_values("net_pnl").iloc[-1]   # tuned on net P&L: fees are part of the profile
-            kw = {c: best[c] for c in ("half", "inv_skew", "kappa", "guard", "hold", "tau", "imb_min", "max_ahead")
-                  if c in best.index and not pd.isna(best[c])}
-            for c in ("hold",):
+            kw = {c: best[c] for c in ("half", "inv_skew", "kappa", "guard", "hold", "tau", "imb_min", "max_ahead",
+                                       "half_bp", "c1_bp", "skew_bp", "zcol") if c in best.index and not pd.isna(best[c])}
+            for c in ("hold", "zcol"):
                 if c in kw: kw[c] = int(kw[c])
             if "guard" in kw: kw["guard"] = bool(kw["guard"])
-            r, c = one(Dtest, Btest, T_test, p_test, prof, cls, kw, None if pd.isna(best["q"]) else best["q"], NAMES[key])
+            r, c = one(Dtest, Btest, T_test, p_test, prof, cls, kw, None if pd.isna(best["q"]) else best["q"], NAMES[key], aux=Ztest)
             rows.append(r); curves[(prof.name, key)] = c
-            if key == "Q" and prof.name == "hft_firm":
-                q_kw = kw
+            if key in ("Q", "O", "X") and prof.name == "hft_firm":
+                hft_kw[key] = kw
             print(f"  {prof.name:12s} {NAMES[key]:28s} fills {r['fills']:7,d}  gross {r['gross_pnl']:9.2f}  "
                   f"fees {r['fees']:9.2f}  net {r['net_pnl']:9.2f}")
         print(f"  ({prof.name}: tuned {len(grid)} settings and tested in {time.time() - t0:.0f}s)")
-    # robustness: the Q setting chosen for hft_firm, on the test day, with the profile's optimistic assumptions removed
+    # robustness: the Q and O settings chosen for hft_firm, on the test day, with the profile's optimistic assumptions removed
     from dataclasses import replace
     hft = profiles(rm, rt)["hft_firm"]
     for label, prof in (("hft_firm, no maker rebate", replace(hft, maker_bps=0.0)),
                         ("hft_firm, 10 ms queue race", replace(hft, race_window_ms=10.0)),
                         ("hft_firm, back of every queue", replace(hft, queue="back")),
                         ("hft_firm, 1 ms latency", replace(hft, order_latency_ms=1.0, cancel_latency_ms=1.0))):
-        r, _ = one(Dtest, Btest, T_test, p_test, prof, S.QueueAwareMM, q_kw, None, NAMES["Q"])
-        r["profile"] = label; rows.append(r)
-        print(f"  {label:30s} Q  fills {r['fills']:7,d}  gross {r['gross_pnl']:9.2f}  fees {r['fees']:9.2f}  net {r['net_pnl']:9.2f}")
+        for key, cls in (("Q", S.QueueAwareMM), ("O", S.ImbalanceMM), ("X", S.ImbalanceMM)):
+            r, _ = one(Dtest, Btest, T_test, p_test, prof, cls, hft_kw[key], None, NAMES[key], aux=Ztest)
+            r["profile"] = label; rows.append(r)
+            print(f"  {label:30s} {key}  fills {r['fills']:7,d}  gross {r['gross_pnl']:9.2f}  fees {r['fees']:9.2f}  net {r['net_pnl']:9.2f}")
     return rows, tunes, curves
 
 
-NAMES = {"A": "A  market maker, no model", "C": "C  NSQ-MM", "Q": "Q  NSQ-MM-Q (queue-aware)", "T": "T  signal taker"}
+NAMES = {"A": "A  market maker, no model", "C": "C  NSQ-MM", "Q": "Q  NSQ-MM-Q (queue-aware)",
+         "O": "O  imbalance MM (hftbacktest port)", "X": "X  imbalance MM, Binance signal", "T": "T  signal taker"}
 
 
 def plot(rows, OUTP):
@@ -456,13 +511,13 @@ def plot(rows, OUTP):
     d = pd.DataFrame(rows)
     markets = list(dict.fromkeys(d.market))
     fig, axs = plt.subplots(1, len(markets), figsize=(6 * len(markets), 4), squeeze=False)
-    cols = dict(zip(NAMES.values(), ("#9aa5a0", "#00b36b", "#e0a100", "#2a78d6")))
+    cols = dict(zip(NAMES.values(), ("#9aa5a0", "#00b36b", "#e0a100", "#8b5cd6", "#d6336c", "#2a78d6")))
     profs = ["retail", "hft_firm", "frictionless"]
     for ax, m in zip(axs[0], markets):
-        x = np.arange(len(profs)); w = 0.2
+        x = np.arange(len(profs)); w = 0.13
         for i, (s, col) in enumerate(cols.items()):
             v = [d[(d.market == m) & (d.profile == p) & (d.strategy == s)].net_pnl.iloc[0] for p in profs]
-            ax.bar(x + (i - 1.5) * w, v, w, color=col, label=s)
+            ax.bar(x + (i - 2.5) * w, v, w, color=col, label=s)
         ax.axhline(0, color="#777", lw=1)
         ax.set_xticks(x, ["retail", "HFT firm", "frictionless"])
         ax.set(title=m, ylabel="net P&L after fees (USDT)")
@@ -514,8 +569,14 @@ def selftest():
     ex5.on_trade(5, 100, 0.0, -1, 2); oid = ex5.place(+1, 100, 1.0); ex5.cancel(oid)
     ex5.on_trade(5, 100, 4.0, -1, 3)                                    # same ms: the place and the cancel wait
     assert not ex5.fills and oid in ex5.orders and not ex5.orders[oid].live
+    # imbalance MM: mid 10,000.5 ticks = ~1 tick per bp; alpha +-2 with c1 = 1 bp shifts the reservation price by +-2 ticks
+    ex6 = Exchange(P["hft_firm"], 0.01)
+    ex6.on_book(0, [10000 - i for i in range(5)], [5.0] * 5, [10001 + i for i in range(5)], [5.0] * 5, 1)
+    om = S.ImbalanceMM(size=1.0, half_bp=0.4, c1_bp=1.0, skew_bp=0.0)
+    ex6.aux = (2.0, 0.0); assert om.targets(ex6) == {+1: 10000, -1: 10003}
+    ex6.aux = (-2.0, 0.0); assert om.targets(ex6) == {+1: 9998, -1: 10001}
     for cls, kw in ((S.QuotingMM, {}), (S.NSQMM, {"guard": True}), (S.QueueAwareMM, {"tau": 0.5, "guard": True}),
-                    (S.SignalTaker, {})):
+                    (S.ImbalanceMM, {}), (S.SignalTaker, {})):
         ex3 = Exchange(P["hft_firm"], 0.01)
         n = 50
         prob = np.tile([0.1, 0.2, 0.7], (n, 1))

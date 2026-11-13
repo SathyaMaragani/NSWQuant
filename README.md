@@ -53,7 +53,9 @@ Net P&L after fees on the test day (USDT):
 |---|---|---|---|---|---|---|
 | A market maker, no model | −3,586.74 | −652.25 | −1,361.52 | −5,413.84 | −343.00 | −619.95 |
 | C NSQ-MM | −2,096.43 | −232.10 | −411.45 | −3,359.08 | −146.12 | −293.14 |
-| **Q NSQ-MM-Q (queue-aware)** | −107.71 | **+11.54** | +65.73 | −24.38 | **−0.48** | −8.88 |
+| Q NSQ-MM-Q (queue-aware) | −107.71 | +11.54 | +65.73 | −24.38 | −0.48 | −8.88 |
+| O imbalance MM, hftbacktest port (Bybit book) | −1,131.11 | −100.09 | −302.01 | −1,552.63 | −83.30 | −195.98 |
+| **X imbalance MM, Binance signal** | −151.06 | **+201.57** | +175.68 | −524.54 | **+2.15** | −16.63 |
 | T signal taker | −27.00 | −10.26 | +15.49 | −29.70 | −37.08 | +71.29 |
 
 Infrastructure cuts NSQ-MM's net loss by about 90% (retail → HFT firm). The model cuts the loss by 42–65% under every
@@ -79,6 +81,35 @@ What it shows, honestly:
 - It is thin: the test-day max drawdown (−52.74) is larger than the profit. One test day is not evidence of a
   durable edge; it needs more days before anyone relies on it.
 
+### O and X: an open-source strategy, ported and tested
+O is the order-book-imbalance market maker from hftbacktest's tutorials (github.com/nkaz001/hftbacktest, MIT), which
+reports Sharpe 3–11 on Binance Futures backtests with a maker rebate:
+`alpha = z-score of (bid depth − ask depth)`, `fair = mid + c1·alpha`, `reservation = fair − skew·position`,
+quote `reservation ± half_spread` (never better than the touch), requote once a second.
+- **O**, the port as published but fed by Bybit's own book (all 200 published levels, ~0.1 % of the price): the
+  signal barely predicts Bybit's next moves (correlation ≈ 0.005 on day 1), tuning switches it off, and the test
+  day loses (ETH −100.09, BTC −83.30).
+- **X**, the same strategy fed by the signal the tutorial actually uses: imbalance within ±2.5 % of the price, from
+  Binance's public `bookDepth` archive (30 s snapshots, data.binance.vision; files in `raw/binance/`, not committed).
+  On day 1 it predicts Bybit's next 5 minutes (correlation +0.13 ETH, +0.08 BTC). Test day, `hft_firm`:
+  **ETH +201.57 net, +90.40 before fees**: the first market maker here that makes money without the rebate.
+  BTC +2.15, break-even.
+
+Checks on X (ETH, test day, `hft_firm`):
+| check | net P&L |
+|---|---|
+| as tested (signal usable 1 s after each Binance snapshot) | +201.57 |
+| Binance signal 30 s / 60 s late | +212.17 / +193.46 |
+| 5 min late / 1 hour late | +4.92 / −280.69 |
+| no maker rebate | +90.40 |
+| 10 ms queue race / back of every queue / 1 ms latency | +201.35 / +200.83 / +201.57 |
+
+The profit survives a 60 s delay and is gone at 5 min, which is what a real minutes-ahead signal looks like (a
+timestamp leak would vanish at 30 s); a stale signal loses. Caveats: it earns by holding inventory in the signal's
+direction for minutes (10 s markout is still −17 ticks per fill), so it is part market making, part slow directional
+bet; the test-day max drawdown (−191.10) is about as large as the profit; it is one test day, and several strategy
+families (A, C, Q, O, X) have now been tried, so the best of them is flattered by selection. It needs more days.
+
 Fix in this version: trade prints that share a millisecond are one sweep, so a cancel can no longer take effect
 between them (the earlier simulator let the queue-depletion guard dodge part of a sweep). A and C were re-run.
 
@@ -93,7 +124,7 @@ between them (the earlier simulator let the queue-depletion guard dodge part of 
 | `experiments.py` | teacher vs student, QAT, Pareto, importance, decision value |
 | `strategy.py` | NSQ-MM market maker, signal taker, event-driven backtester |
 | `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed + dashboard |
-| `hftsim.py`, `strategies.py` | HFT simulation environment with infrastructure profiles; strategy library |
+| `hftsim.py`, `strategies.py` | HFT simulation environment with infrastructure profiles; strategy library (A, C, Q, O, X, T) |
 | `live_predict.py` | live / replay NIFTY inference + dashboard server |
 | `c/` | C feature port, generated model header, benchmark |
 | `web/` | dashboards (ECharts + GSAP, vendored) |

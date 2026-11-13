@@ -135,6 +135,36 @@ class QueueAwareMM(NSQMM):
             self.on_book(env)                      # re-quote on every trade: fast infrastructure only
 
 
+class ImbalanceMM(QuotingMM):
+    """Port of hftbacktest's "Market Making with Alpha - Order Book Imbalance" (github.com/nkaz001/hftbacktest, MIT).
+    alpha = z-score of (total bid size - total ask size) across the published book, sampled once a second over a
+    rolling window (env.aux[zcol], precomputed causally by the runner);
+    fair = mid + c1 * alpha;  reservation = fair - skew * position / order size;
+    bid = min(reservation - half, best bid), ask = max(reservation + half, best ask); requote once per interval_ms;
+    stop quoting a side at max_pos lots. Prices are in basis points of the mid so one setting fits ETH and BTC."""
+
+    def __init__(self, size, half_bp=0.5, c1_bp=0.5, skew_bp=0.05, zcol=0, interval_ms=1000, max_pos=20, **kw):
+        super().__init__(size, qmax=max_pos, **kw)
+        self.half_bp, self.c1_bp, self.skew_bp, self.zcol = half_bp, c1_bp, skew_bp, int(zcol)
+        self.interval_ms, self.max_pos, self.next_t = interval_ms, max_pos, 0
+
+    def targets(self, env):
+        tpb = env.mid * 1e-4                       # ticks per basis point (mid is in ticks)
+        alpha = env.aux[self.zcol] if env.aux is not None else 0.0
+        alpha = alpha if math.isfinite(alpha) else 0.0
+        res = env.mid + self.c1_bp * tpb * alpha - self.skew_bp * tpb * env.pos / self.size
+        bid = min(math.floor(res - self.half_bp * tpb), env.bp[0])
+        ask = max(math.ceil(res + self.half_bp * tpb), env.ap[0])
+        return {+1: None if env.pos >= self.max_pos * self.size else bid,
+                -1: None if env.pos <= -self.max_pos * self.size else ask}
+
+    def on_book(self, env):
+        if env.now < self.next_t:
+            return
+        self.next_t = env.now + self.interval_ms
+        super().on_book(env)
+
+
 class SignalTaker(Strategy):
     """Cross the spread on the model's confident calls, hold `hold` book updates, cross back."""
 
