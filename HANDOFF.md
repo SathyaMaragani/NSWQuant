@@ -242,8 +242,11 @@ Engine (`Engine`), one process, Bybit public WS `orderbook.200` + `publicTrade` 
 - `series` rows are `[ts, mid, best_bid, best_ask, C_quote_bid, C_quote_ask]` (C only, by design).
 
 Page (`web/trading.html`), top to bottom:
-1. **Trading desk**: market depth ladder (10 levels, our working orders tagged, our own price levels inserted as rows) ·
-   positions (all strategies) · order book / trade book tabs with filters · time & sales. A strategy selector
+1. **Trading desk**: order book ladder (`renderBook` / `bookMaps` in trading.html: 10/20/50 levels, price grouping
+   0.01/0.05/0.10/0.25, running totals per side, bid/ask imbalance meter, size-change flashes, walls = each side's 3
+   largest levels ≥ 4× the median, spread in bp, last price with tick arrow; exact top 10 from `desk.depth`, deeper
+   levels from the newest heatmap column, i.e. full depth only within ±150 ticks of the mid; our working orders tagged,
+   our own price levels inserted as rows) · positions (all strategies) · order book / trade book tabs with filters · time & sales. A strategy selector
    (default **X**) drives the books **and** the chart's working-order lines / fill markers. Chart order lines are
    accumulated in the page from the order book's OPEN orders on each poll (they rebuild after a reload, ≤ 2 min);
    fill markers come from the trade book.

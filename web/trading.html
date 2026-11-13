@@ -120,19 +120,35 @@
   .scroll { max-height: 240px; overflow: auto; }
   .note { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
   /* trading desk: depth ladder | positions + order/trade book | time & sales */
-  .desk { display: grid; grid-template-columns: 330px minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
-  .ladder td, .ladder th { padding: 3px 6px; font-size: 12px; text-align: right; border-bottom: 1px solid #f3f5f8; }
-  .ladder th:nth-child(1), .ladder td:nth-child(1) { text-align: left; width: 22%; }
-  .ladder th:nth-child(2), .ladder td:nth-child(2) { text-align: right; }
-  .ladder td:nth-child(3) { text-align: center; font-weight: 600; }
-  .ladder th:nth-child(3) { text-align: center; }
-  .ladder th:nth-child(5), .ladder td:nth-child(5) { text-align: right; width: 22%; }
+  .desk { display: grid; grid-template-columns: 420px minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
+  /* order book ladder: our bids | total | bid qty | price | ask qty | total | our asks */
+  .ladwrap { max-height: 560px; overflow-y: auto; border-top: 1px solid var(--line); }
+  .ladder { table-layout: fixed; }
+  .ladder th { position: sticky; top: 0; background: var(--panel); z-index: 1; font-size: 9.5px; padding: 6px 4px; }
+  .ladder td { padding: 2px 4px; font-size: 11.5px; border-bottom: 1px solid #f3f5f8; white-space: nowrap; overflow: hidden; }
+  .ladder th:nth-child(1), .ladder td:nth-child(1) { width: 15%; text-align: left; }
+  .ladder th:nth-child(2), .ladder td:nth-child(2), .ladder th:nth-child(3), .ladder td:nth-child(3) { width: 14%; text-align: right; }
+  .ladder th:nth-child(4), .ladder td:nth-child(4) { width: 16%; text-align: center; font-weight: 600; }
+  .ladder th:nth-child(5), .ladder td:nth-child(5), .ladder th:nth-child(6), .ladder td:nth-child(6) { width: 14%; text-align: left; }
+  .ladder th:nth-child(7), .ladder td:nth-child(7) { width: 13%; text-align: right; }
   .ladder .bq { background: linear-gradient(270deg, var(--bid-soft) var(--w), transparent var(--w)); }
-  .ladder .aq { background: linear-gradient(90deg, var(--ask-soft) var(--w), transparent var(--w)); text-align: left !important; }
-  .ladder tr.b td:nth-child(3) { color: var(--bid); } .ladder tr.a td:nth-child(3) { color: var(--ask); }
+  .ladder .aq { background: linear-gradient(90deg, var(--ask-soft) var(--w), transparent var(--w)); }
+  .ladder .bc { color: var(--ink2); background: linear-gradient(270deg, rgba(11,132,87,.07) var(--w), transparent var(--w)); }
+  .ladder .ac { color: var(--ink2); background: linear-gradient(90deg, rgba(201,47,61,.07) var(--w), transparent var(--w)); }
+  .ladder tr.b td:nth-child(4) { color: var(--bid); } .ladder tr.a td:nth-child(4) { color: var(--ask); }
   .ladder tr.touch td { font-weight: 600; }
-  .ladder tr.mine td:nth-child(3) { box-shadow: inset 0 0 0 1.5px var(--brand); border-radius: 3px; }
-  .ladder tr.spr td { text-align: center !important; background: var(--panel2); color: var(--ink2); font: 500 11.5px var(--sans); padding: 5px; }
+  .ladder tr.mine td:nth-child(4) { box-shadow: inset 0 0 0 1.5px var(--brand); border-radius: 3px; }
+  .ladder td.wall { font-weight: 700; color: var(--ink); box-shadow: inset 0 -2px 0 var(--amber); }
+  .ladder td.up { animation: qUp .9s ease-out; } .ladder td.dn { animation: qDn .9s ease-out; }
+  @keyframes qUp { from { background-color: rgba(11,132,87,.35); } to { background-color: transparent; } }
+  @keyframes qDn { from { background-color: rgba(201,47,61,.35); } to { background-color: transparent; } }
+  .ladder tr.spr td { text-align: center !important; background: var(--panel2); color: var(--ink2); font: 500 11.5px var(--sans); padding: 5px 4px; white-space: normal; }
+  .ladder tr.spr b { font-family: var(--mono); color: var(--ink); }
+  .bookctl { display: flex; gap: 8px; flex-wrap: wrap; width: 100%; align-items: center; font-size: 11.5px; color: var(--muted); }
+  .imb { margin: 0 0 8px; }
+  .imb .bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--line); }
+  .imb .bar i { display: block; height: 100%; transition: width .4s; }
+  .imb .lab { display: flex; justify-content: space-between; margin-top: 5px; font: 500 11.5px var(--mono); }
   .otag { display: inline-block; font: 600 10.5px/1 var(--mono); padding: 3px 5px; border-radius: 3px; margin: 0 2px; white-space: nowrap; }
   .otag.C { background: var(--brand); color: #fff; } .otag.X { background: var(--ink); color: #fff; } .otag.A { background: #dfe4ec; color: var(--ink2); }
   .otag.pend { opacity: .55; outline: 1px dashed currentColor; }
@@ -157,7 +173,7 @@
   .tapebox { height: 520px; overflow: auto; }
   .tape { min-width: 0; } .tape td:nth-child(2) { font-weight: 600; }
   .empty td { text-align: center !important; color: var(--muted); font-family: var(--sans); padding: 18px; }
-  @media (max-width: 1350px) { .desk { grid-template-columns: 330px minmax(0, 1fr); } .desk > .card:last-child { grid-column: 1 / -1; } .tapebox { height: 260px; } }
+  @media (max-width: 1350px) { .desk { grid-template-columns: 420px minmax(0, 1fr); } .desk > .card:last-child { grid-column: 1 / -1; } .tapebox { height: 260px; } }
   @media (max-width: 860px) { .desk { grid-template-columns: 1fr; } }
   @media (max-width: 1350px) { .kpis { grid-template-columns: repeat(3, 1fr); } .kpis .card:nth-child(n+4) { border-top: 1px solid var(--line); } .kpis .card:nth-child(4) { border-left: 0; } .row2, .row3 { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .main, .top-in { padding-left: 16px; padding-right: 16px; } .kpis { grid-template-columns: 1fr; } .kpis .card { border-left: 0 !important; border-top: 1px solid var(--line); } .kpis .card:first-child { border-top: 0; } .vsep { display: none; } }
@@ -179,8 +195,13 @@
 <main class="main">
   <section class="desk" aria-label="Trading desk">
     <div class="card">
-      <div class="head"><h2>Market depth</h2><span class="sub" id="dSpread">–</span></div>
-      <table class="ladder" id="ladder" aria-label="Order book, ten levels each side, with our working orders"></table>
+      <div class="head"><h2>Order book</h2><span class="sub" id="dSpread">–</span>
+        <div class="bookctl">
+          <span>Levels</span><div class="seg sm" id="lvSeg" role="group" aria-label="Levels per side"><button class="on" data-l="10">10</button><button data-l="20">20</button><button data-l="50">50</button></div>
+          <span>Group</span><div class="seg sm" id="grpSeg" role="group" aria-label="Price grouping"><button class="on" data-g="0.01">0.01</button><button data-g="0.05">0.05</button><button data-g="0.1">0.10</button><button data-g="0.25">0.25</button></div>
+        </div></div>
+      <div class="imb" id="imb" aria-label="Bid versus ask quantity in the levels shown"></div>
+      <div class="ladwrap" id="ladwrap"><table class="ladder" id="ladder" aria-label="Order book with cumulative totals and our working orders"></table></div>
       <div class="note" id="dNote">Bybit live book · our working orders tagged at their price</div>
     </div>
     <div class="card">
@@ -517,44 +538,89 @@ const sgn = v => v == null ? "–" : `<span class="${v >= 0 ? "pos" : "neg"}">${
 const side = s => `<span class="${s > 0 ? "pos" : "neg"}">${s > 0 ? "BUY" : "SELL"}</span>`;
 const ms = t => { const d = new Date(t); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
 const openSt = o => o.status === "OPEN" || o.status === "PENDING";
+// ---------------------------------------------------------------- order book ladder
+// Source: the exact top 10 from desk.depth (freshest), deeper levels from the newest heatmap column (full Bybit book
+// within +-150 ticks of the mid, refreshed every 300 ms). Grouping buckets bids down and asks up, like an exchange.
+let LV = 10, GRP = 0.01, PREVQ = null, CENTER = true, LASTPX = null, LTPDIR = 0;
+function bookMaps(dp) {
+  const bb = Math.round(dp.bp[0] / TICK), ba = Math.round(dp.ap[0] / TICK), bid = new Map(), ask = new Map(), c = HC[HC.length - 1];
+  if (c) c[4].forEach((v, k) => { const tk = c[1] + k; if (v > 0) { if (tk <= bb) bid.set(tk, v); else if (tk >= ba) ask.set(tk, v); } });
+  const bLow = Math.round(dp.bp[dp.bp.length - 1] / TICK), aHigh = Math.round(dp.ap[dp.ap.length - 1] / TICK);
+  for (const tk of [...bid.keys()]) if (tk >= bLow) bid.delete(tk);     // inside the exact top 10: trust desk.depth only
+  for (const tk of [...ask.keys()]) if (tk <= aHigh) ask.delete(tk);
+  dp.bp.forEach((p, i) => bid.set(Math.round(p / TICK), dp.bq[i]));
+  dp.ap.forEach((p, i) => ask.set(Math.round(p / TICK), dp.aq[i]));
+  return { bid, ask, bb, ba, reach: c ? [c[1], c[1] + c[4].length - 1] : null };
+}
+function renderBook(D, B) {
+  const dp = D.depth;
+  if (!dp) return;
+  const G = Math.max(1, Math.round(GRP / TICK)), bucket = (side, tk) => side > 0 ? Math.floor(tk / G) * G : Math.ceil(tk / G) * G;
+  const work = {};                                   // our working limit orders, by side + bucket
+  for (const k of ["X", "C", "A"].filter(k => B[k])) for (const o of B[k].orders) if (openSt(o) && o.px != null) {
+    const key = (o.side > 0 ? "b" : "a") + bucket(o.side, Math.round(o.px / TICK));
+    (work[key] = work[key] || []).push(o);
+  }
+  const tags = key => (work[key] || []).map(o => `<span class="otag ${o.s}${o.status === "PENDING" ? " pend" : ""}" title="${o.id} · ${o.status} · ${px(o.px)}">${o.s} ${qty(o.qty)}</span>`).join("");
+  const M = bookMaps(dp), side = (map, s) => {
+    const g = new Map();
+    for (const [tk, q] of map) { const b = bucket(s, tk); g.set(b, (g.get(b) || 0) + q); }
+    let rows = [...g.entries()].sort((x, y) => s > 0 ? y[0] - x[0] : x[0] - y[0]).slice(0, LV);
+    const edge = rows.length ? rows[rows.length - 1][0] : null;
+    for (const k of Object.keys(work)) if (k[0] === (s > 0 ? "b" : "a")) {   // our own level with no market size is still a row
+      const b = +k.slice(1);
+      if (edge != null && (s > 0 ? b >= edge : b <= edge) && !g.has(b)) rows.push([b, 0]);
+    }
+    rows.sort((x, y) => s > 0 ? y[0] - x[0] : x[0] - y[0]);
+    let cum = 0;
+    return rows.map(([b, q]) => [b, q, (cum += q)]);
+  };
+  const bids = side(M.bid, 1), asks = side(M.ask, -1);
+  const shown = [...bids, ...asks].map(r => r[1]).filter(q => q > 0).sort((a, b) => a - b);
+  // walls: each side's 3 largest levels in view, if they are also at least 4x the median level
+  const med = shown.length ? shown[Math.floor(shown.length / 2)] : 0;
+  const top3 = rs => rs.map(r => r[1]).sort((a, b) => b - a)[Math.min(2, rs.length - 1)] ?? Infinity;
+  const wb = Math.max(4 * med, top3(bids)), wa = Math.max(4 * med, top3(asks));
+  const wall = (q, s) => med > 0 && q > 0 && q >= (s > 0 ? wb : wa);
+  const mx = Math.max(1e-9, ...shown), cmx = Math.max(1e-9, bids.length ? bids[bids.length - 1][2] : 0, asks.length ? asks[asks.length - 1][2] : 0);
+  const w = (q, m) => (100 * q / m).toFixed(1) + "%", cell = q => q > 0 ? qfmt(q) : "–";
+  const now = new Map(), fl = (key, q) => { now.set(key, q); const p = PREVQ && PREVQ.get(key); return p == null || Math.abs(p - q) < 1e-9 ? "" : q > p ? " up" : " dn"; };
+  const onLadder = new Set(), rows = ["<tr><th>Our bids</th><th>Total</th><th>Bid qty</th><th>Price</th><th>Ask qty</th><th>Total</th><th>Our asks</th></tr>"];
+  for (let i = asks.length - 1; i >= 0; i--) {
+    const [b, q, c] = asks[i], key = "a" + b; onLadder.add(key);
+    rows.push(`<tr class="a${i === 0 ? " touch" : ""}${work[key] ? " mine" : ""}"><td></td><td></td><td></td><td>${px(b * TICK)}</td>` +
+      `<td class="aq${wall(q, -1) ? " wall" : ""}${fl(key, q)}" style="--w:${w(q, mx)}">${cell(q)}</td><td class="ac" style="--w:${w(c, cmx)}">${qfmt(c)}</td><td>${tags(key)}</td></tr>`);
+  }
+  const spr = dp.ap[0] - dp.bp[0], mid = (dp.ap[0] + dp.bp[0]) / 2, tp = (D.tape || []).slice(-1)[0];
+  if (tp) { if (LASTPX != null && tp[1] !== LASTPX) LTPDIR = tp[1] > LASTPX ? 1 : -1; LASTPX = tp[1]; }
+  rows.push(`<tr class="spr"><td colspan="7">Spread <b>${spr.toFixed(2)}</b> · ${Math.round(spr / TICK)} tick${Math.round(spr / TICK) === 1 ? "" : "s"} · ${(spr / mid * 1e4).toFixed(2)} bp · mid <b>${px(mid)}</b>` +
+    (tp ? ` · last <b class="${tp[3] > 0 ? "pos" : "neg"}">${px(tp[1])} ${LTPDIR > 0 ? "▲" : LTPDIR < 0 ? "▼" : ""}</b> ${qfmt(tp[2])}` : "") + `</td></tr>`);
+  bids.forEach(([b, q, c], i) => {
+    const key = "b" + b; onLadder.add(key);
+    rows.push(`<tr class="b${i === 0 ? " touch" : ""}${work[key] ? " mine" : ""}"><td>${tags(key)}</td><td class="bc" style="--w:${w(c, cmx)}">${qfmt(c)}</td>` +
+      `<td class="bq${wall(q, 1) ? " wall" : ""}${fl(key, q)}" style="--w:${w(q, mx)}">${cell(q)}</td><td>${px(b * TICK)}</td><td></td><td></td><td></td></tr>`);
+  });
+  PREVQ = now;
+  $("ladder").innerHTML = rows.join("");
+  if (CENTER) {                                      // keep the spread in the middle after a settings change
+    const wrap = $("ladwrap"), s = $("ladder").querySelector("tr.spr");
+    if (s) wrap.scrollTop = s.offsetTop - wrap.clientHeight / 2 + s.offsetHeight / 2;
+    CENTER = false;
+  }
+  const tb = bids.length ? bids[bids.length - 1][2] : 0, ta = asks.length ? asks[asks.length - 1][2] : 0, pb = tb + ta > 0 ? tb / (tb + ta) : 0.5;
+  $("imb").innerHTML = `<div class="bar"><i style="width:${(100 * pb).toFixed(1)}%;background:var(--bid)"></i><i style="width:${(100 - 100 * pb).toFixed(1)}%;background:var(--ask)"></i></div>` +
+    `<div class="lab"><span class="pos">Bids ${qfmt(tb)} · ${(100 * pb).toFixed(0)}%</span><span style="color:var(--muted)">in ${bids.length} / ${asks.length} levels shown</span><span class="neg">${(100 - 100 * pb).toFixed(0)}% · ${qfmt(ta)} Asks</span></div>`;
+  $("dSpread").textContent = `best ${px(dp.bp[0])} / ${px(dp.ap[0])}`;
+  const off = Object.keys(work).filter(k => !onLadder.has(k)).flatMap(k => work[k]);
+  const reach = M.reach ? `full depth within ${px(M.reach[0] * TICK)}–${px(M.reach[1] * TICK)}` : "top 10 only";
+  $("dNote").innerHTML = (off.length ? "Outside the levels shown: " + off.map(o => `${o.s} ${o.side > 0 ? "bid" : "ask"} ${px(o.px)}`).join(" · ") + " · " : "") +
+    `Bybit live book (${reach}) · grouped ${GRP.toFixed(2)} · orange underline = wall (a side's 3 largest levels, ≥ 4× the median) · our working orders tagged (dashed = in flight)`;
+}
 function renderDesk(D) {
   if (!D) return;
   LASTDESK = D;
   const B = D.books, ALL = ["X", "C", "A", "T"].filter(k => B[k]), keys = DS === "all" ? ALL : B[DS] ? [DS] : ["C"];
-  // ladder: ten levels each side, our working limit orders tagged at their price
-  const work = {};
-  for (const k of ["X", "C", "A"].filter(k => B[k])) for (const o of B[k].orders) if (openSt(o) && o.px != null) {
-    const key = (o.side > 0 ? "b" : "a") + Math.round(o.px / TICK);
-    (work[key] = work[key] || []).push(o);
-  }
-  const tags = key => (work[key] || []).map(o => `<span class="otag ${o.s}${o.status === "PENDING" ? " pend" : ""}" title="${o.id} · ${o.status}">${o.s} ${qty(o.qty)}</span>`).join("");
-  const dp = D.depth, onLadder = new Set();
-  if (dp) {
-    const mx = Math.max(...dp.bq, ...dp.aq), w = q => (100 * q / mx).toFixed(1) + "%";
-    // a level of our own that the market has no size at is still a row: merge our prices into each side's ladder
-    const lvls = (sd, P, Q) => {
-      const m = new Map(P.map((p, i) => [Math.round(p / TICK), Q[i]])), edge = Math.round(P[P.length - 1] / TICK);
-      for (const k of Object.keys(work)) if (k[0] === sd) { const t = +k.slice(1); if (sd === "a" ? t <= edge : t >= edge) m.has(t) || m.set(t, 0); }
-      return [...m.entries()].sort((x, y) => sd === "a" ? x[0] - y[0] : y[0] - x[0]);
-    };
-    const A = lvls("a", dp.ap, dp.aq), Bd = lvls("b", dp.bp, dp.bq), cell = q => q > 0 ? qfmt(q) : "–";
-    const rows = ["<tr><th>Our bids</th><th>Bid qty</th><th>Price</th><th>Ask qty</th><th>Our asks</th></tr>"];
-    for (let i = A.length - 1; i >= 0; i--) {
-      const [t, q] = A[i], key = "a" + t; onLadder.add(key);
-      rows.push(`<tr class="a${t === Math.round(dp.ap[0] / TICK) ? " touch" : ""}${work[key] ? " mine" : ""}"><td></td><td></td><td>${px(t * TICK)}</td><td class="aq" style="--w:${w(q)}">${cell(q)}</td><td>${tags(key)}</td></tr>`);
-    }
-    const spr = dp.ap[0] - dp.bp[0];
-    rows.push(`<tr class="spr"><td colspan="5">Spread ${spr.toFixed(2)} · ${Math.round(spr / TICK)} tick${Math.round(spr / TICK) === 1 ? "" : "s"} · mid ${px((dp.ap[0] + dp.bp[0]) / 2)}</td></tr>`);
-    Bd.forEach(([t, q]) => {
-      const key = "b" + t; onLadder.add(key);
-      rows.push(`<tr class="b${t === Math.round(dp.bp[0] / TICK) ? " touch" : ""}${work[key] ? " mine" : ""}"><td>${tags(key)}</td><td class="bq" style="--w:${w(q)}">${cell(q)}</td><td>${px(t * TICK)}</td><td></td><td></td></tr>`);
-    });
-    $("ladder").innerHTML = rows.join("");
-    $("dSpread").textContent = `best ${px(dp.bp[0])} / ${px(dp.ap[0])}`;
-  }
-  const off = Object.keys(work).filter(k => !onLadder.has(k)).flatMap(k => work[k]);
-  $("dNote").innerHTML = off.length ? "Outside the top 10: " + off.map(o => `${o.s} ${o.side > 0 ? "bid" : "ask"} ${px(o.px)}`).join(" · ")
-    : "Bybit live book · our working orders tagged at their price (dashed = in flight)";
+  renderBook(D, B);
   // positions, one row per strategy; a row flashes when it trades
   const pr = ["<tr><th>Strategy</th><th>Net qty</th><th>Avg price</th><th>Mark (mid)</th><th>Unrealised</th><th>Realised</th><th title=\"Negative = fees paid, positive = maker rebate received\">Fees / rebate</th><th>Net P&amp;L</th><th>Bought</th><th>Sold</th></tr>"];
   for (const k of ALL) {
@@ -598,6 +664,8 @@ const segPick = (id, attr, set) => document.querySelectorAll(`#${id} button`).fo
 });
 segPick("dStrat", "s", v => { DS = v; if (LASTS) price.setOption({ series: ourSeries(LASTS) }); });
 segPick("oFilt", "o", v => DO = v);
+segPick("lvSeg", "l", v => { LV = +v; CENTER = true; PREVQ = null; });
+segPick("grpSeg", "g", v => { GRP = +v; CENTER = true; PREVQ = null; });
 document.querySelectorAll(".btabs [role=tab]").forEach(b => b.onclick = () => {
   document.querySelectorAll(".btabs [role=tab]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
   DB = b.dataset.b; $("oFilt").style.visibility = DB === "orders" ? "visible" : "hidden"; renderDesk(LASTDESK);
