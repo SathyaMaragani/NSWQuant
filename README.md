@@ -92,8 +92,7 @@ quote `reservation ± half_spread` (never better than the touch), requote once a
 - **X**, the same strategy fed by the signal the tutorial actually uses: imbalance within ±2.5 % of the price, from
   Binance's public `bookDepth` archive (30 s snapshots, data.binance.vision; files in `raw/binance/`, not committed).
   On day 1 it predicts Bybit's next 5 minutes (correlation +0.13 ETH, +0.08 BTC). Test day, `hft_firm`:
-  **ETH +201.57 net, +90.40 before fees**: the first market maker here that makes money without the rebate.
-  BTC +2.15, break-even.
+  ETH +201.57 net (+90.40 before fees), BTC +2.15. 10 Nov turned out to be one of X's better days; see below.
 
 Checks on X (ETH, test day, `hft_firm`):
 | check | net P&L |
@@ -110,6 +109,23 @@ direction for minutes (10 s markout is still −17 ticks per fill), so it is par
 bet; the test-day max drawdown (−191.10) is about as large as the profit; it is one test day, and several strategy
 families (A, C, Q, O, X) have now been tried, so the best of them is flattered by selection. It needs more days.
 
+### Nine out-of-sample days (`multiday.py`)
+The 9 Nov settings, frozen, replayed under `hft_firm` on 3–8 and 10–12 Nov (no re-tuning). Net USDT:
+
+| | ETH | BTC |
+|---|---|---|
+| X, net (days positive, t) | **+727.03** (6/9, t = 1.83) | −35.08 (5/9, t = −0.26) |
+| X, before fees and rebate | −110.83 | −384.02 |
+| X0, same quotes with the signal off | −620.12 | −859.33 |
+| **signal value, X − X0** | **+1,347.15, better on 8/9 days (t = 3.57)** | **+824.25, better on 8/9 days (t = 4.06)** |
+| Q, NSQ-MM-Q | −95.39 (3/9) | +36.76 (4/9) |
+
+What holds: the Binance ±2.5 % signal is real; it beats the same quoting without it on 8 of 9 days in both markets.
+What does not: across the 9 days X needs the maker rebate (ETH is −110.83 before it), ETH's t of 1.83 is not
+significant at 95 %, BTC has no edge, and Q's +11.54 test-day result did not hold (3/9 days positive on ETH).
+Per-day results: `results/hftsim/multiday.csv`; the Results page (`web/results.html`, served by `paper_trade.py`
+at `/results.html`) shows all of it, built by `make_results.py`.
+
 Fix in this version: trade prints that share a millisecond are one sweep, so a cancel can no longer take effect
 between them (the earlier simulator let the queue-depletion guard dodge part of a sweep). A and C were re-run.
 
@@ -125,6 +141,7 @@ between them (the earlier simulator let the queue-depletion guard dodge part of 
 | `strategy.py` | NSQ-MM market maker, signal taker, event-driven backtester |
 | `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed + dashboard |
 | `hftsim.py`, `strategies.py` | HFT simulation environment with infrastructure profiles; strategy library (A, C, Q, O, X, T) |
+| `multiday.py`, `make_results.py` | frozen-settings test across 9 days; builds `web/results_data.json` for the Results page |
 | `live_predict.py` | live / replay NIFTY inference + dashboard server |
 | `c/` | C feature port, generated model header, benchmark |
 | `web/` | dashboards (ECharts + GSAP, vendored) |
@@ -136,6 +153,7 @@ python fetch_bybit.py linear ETHUSDT 2026-11-09 2026-11-10   # order books
 # trade ticks: https://public.bybit.com/trading/ETHUSDT/  -> raw/trades/ETHUSDT_linear_<date>.csv.gz
 python strategy.py                      # backtest, saves models/ethusdt_mm.npz
 python paper_trade.py                   # live paper trading at http://127.0.0.1:8770/
+python multiday.py && python make_results.py   # multi-day test -> Results page at http://127.0.0.1:8770/results.html
 
 python collect_kite.py --login          # NIFTY: daily, keys in KITE_API_KEY / KITE_API_SECRET
 python collect_kite.py                  # record during market hours

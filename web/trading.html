@@ -25,6 +25,11 @@
   .instr { display: flex; flex-direction: column; gap: 3px; }
   .instr b { font: 600 15px/1 var(--mono); color: var(--ink); } .instr small { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
   .grow { flex: 1; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs a { font: 500 13px var(--sans); color: var(--ink2); text-decoration: none; padding: 8px 12px; border-radius: 5px; }
+  .tabs a:hover { background: var(--panel2); color: var(--ink); }
+  .tabs a.on { background: var(--ink); color: #fff; }
+  .tabs a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   .main { max-width: 1760px; margin: 0 auto; padding: 18px 24px 28px; display: flex; flex-direction: column; gap: 14px; }
   .pill { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px; border-radius: 4px; font: 600 12px/1 var(--sans); letter-spacing: .04em; text-transform: uppercase; color: var(--bid); background: var(--bid-soft); border: 1px solid #bfe5d1; }
   .pill.warn { color: var(--amber); background: var(--amber-soft); border-color: #f2d6a8; text-transform: none; letter-spacing: 0; }
@@ -119,6 +124,7 @@
   <div class="brand"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="5" fill="#0d1626"/><path d="M6 18 L10.5 8.5 L15 15 L20 7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE<span>Quant</span></div>
   <div class="vsep"></div>
   <div class="instr"><b id="sym">ETHUSDT PERP</b><small>NSQ-MM · paper trading</small></div>
+  <nav class="tabs" aria-label="Pages"><a class="on" href="./" aria-current="page">Live paper trading</a><a href="results.html">Results</a></nav>
   <span class="pill" id="live"><span class="dot"></span><span id="liveTxt">Connecting</span></span>
   <span class="sub" id="upd">–</span>
   <span class="grow"></span>
