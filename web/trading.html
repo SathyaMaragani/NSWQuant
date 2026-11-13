@@ -63,6 +63,30 @@
   .contrast { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink2); }
   .contrast input { width: 96px; accent-color: var(--brand); }
   .dotkey { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(13,22,38,.25); }
+  .term { background: #0b1020; border: 1px solid #1b2440; border-radius: 8px; overflow: hidden; }
+  .term-head { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-bottom: 1px solid #1b2440; flex-wrap: wrap; }
+  .term-head h2 { margin: 0; font: 600 13px/1 var(--sans); color: #e6ebf5; letter-spacing: .06em; text-transform: uppercase; }
+  .term-head .cmd { font: 500 12px var(--mono); color: #7f8db0; }
+  .term-head .stat { font: 500 12px var(--mono); color: #c9d3e6; }
+  .term-head .stat b { color: #fff; font-weight: 600; }
+  .term-head .sim { font: 600 11px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: #fbbf24; border: 1px solid rgba(251,191,36,.35); border-radius: 4px; padding: 4px 7px; }
+  .tseg { display: inline-flex; border: 1px solid #2a3550; border-radius: 5px; overflow: hidden; margin-left: auto; }
+  .tseg button, .tbtn { border: 0; background: transparent; color: #9aa6c0; font: 500 12px var(--sans); padding: 5px 10px; cursor: pointer; }
+  .tseg button + button { border-left: 1px solid #2a3550; }
+  .tseg button.on { background: #e6ebf5; color: #0b1020; }
+  .tbtn { border: 1px solid #2a3550; border-radius: 5px; }
+  .tbtn.on { background: #fbbf24; color: #0b1020; border-color: #fbbf24; }
+  .tseg button:focus-visible, .tbtn:focus-visible { outline: 2px solid #7dd3fc; outline-offset: -2px; }
+  .term-body { height: 340px; overflow: auto; padding: 10px 14px 12px; font: 12.5px/1.65 var(--mono); color: #c9d3e6; }
+  .tl { white-space: pre-wrap; word-break: break-word; }
+  .tl .t { color: #5d6b8a; } .tl .w { display: inline-block; width: 7ch; color: #9aa6c0; } .tl .k { display: inline-block; width: 7ch; font-weight: 600; }
+  .tl.new { animation: tlin .9s ease-out; }
+  @keyframes tlin { from { background: rgba(125,211,252,.12); } to { background: transparent; } }
+  .k-SIGNAL { color: #7dd3fc; } .k-PLACE { color: #93c5fd; } .k-AMEND { color: #a5b4fc; } .k-CANCEL { color: #fbbf24; }
+  .k-LIVE { color: #94a3b8; } .k-buy { color: #34d399; } .k-sell { color: #f87171; } .k-EXIT { color: #c084fc; }
+  .k-FLAT { color: #ffffff; } .k-ENTER { color: #fbbf24; }
+  .tl.FLAT .m { color: #ffffff; font-weight: 600; }
+  .cursor { display: inline-block; width: .6em; height: 1.1em; background: #c9d3e6; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
   .chartfoot { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
   .steps { display: flex; flex-direction: column; gap: 10px; }
   .step { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: var(--panel2); }
@@ -143,6 +167,20 @@
           <div class="sub" id="risk">–</div></div>
       </div>
     </div>
+  </section>
+
+  <section class="term" aria-label="Algorithm terminal">
+    <div class="term-head">
+      <h2>Algorithm terminal</h2>
+      <span class="cmd">$ python paper_trade.py --symbol ETHUSDT</span>
+      <span class="sim" title="Orders are simulated against the live public Bybit feed; nothing is sent to an exchange">Simulated orders · live market data</span>
+      <span class="stat">msgs <b id="tMsgs">0</b> · fills <b id="tFills">0</b> · round trips <b id="tTrips">0</b></span>
+      <div class="tseg" role="group" aria-label="Filter terminal lines">
+        <button class="on" data-f="all">All</button><button data-f="C">NSQ-MM</button><button data-f="T">Taker</button><button data-f="fills">Fills &amp; exits</button>
+      </div>
+      <button class="tbtn" id="tPause" aria-pressed="false">Pause</button>
+    </div>
+    <div class="term-body" id="term" role="log" aria-live="off"></div>
   </section>
 
   <section class="row3">
@@ -349,6 +387,7 @@ function render(S) {
     { id: "sell", data: fC.filter(f => f.side < 0).map(f => [f.t, f.price]) },
   ] });
   applyZoom();
+  renderTerm(S.log);
   equity.setOption({ series: ["C", "A", "T"].map(k => ({ id: k, data: S.equity[k] })) });
   const name = { A: '<span class="tag tA">A</span>', C: '<span class="tag tC">C</span>', T: '<span class="tag tT">T</span>' };
   $("fills").innerHTML = "<tr><th>Time</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th></tr>" +
@@ -367,6 +406,46 @@ async function poll() {
   catch (e) { if (++fails > 3) { $("live").className = "pill off"; $("liveTxt").textContent = "Waiting for feed"; } }
   setTimeout(poll, 700);
 }
+
+// ---------------------------------------------------------------- algorithm terminal
+let LOG = [], LOGSEQ = 0, TF = "all", TPAUSE = false, NEWSEQ = 0;
+const tcount = { msgs: 0, fills: 0, trips: 0 };
+const WHO = { M: "MODEL", C: "NSQ-MM", T: "TAKER" };
+const esc = x => String(x).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+const tclock = t => { const d = new Date(t); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
+const tkeep = e => TF === "all" || (TF === "fills" ? ["FILL", "EXIT", "FLAT"].includes(e.k) : e.s === TF);
+function tline(e) {
+  const kc = e.k === "FILL" ? (/\bBUY\b/.test(e.m) ? "k-buy" : "k-sell") : "k-" + e.k;
+  return `<div class="tl ${e.k}${e.seq > NEWSEQ ? " new" : ""}"><span class="t">${tclock(e.t)}</span>  <span class="w">${WHO[e.s] || e.s}</span> <span class="k ${kc}">${e.k}</span> <span class="m">${esc(e.m)}</span></div>`;
+}
+function drawTerm() {
+  const el = $("term"), stick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  el.innerHTML = LOG.filter(tkeep).slice(-300).map(tline).join("") + '<div class="tl"><span class="t">$</span> <span class="cursor"></span></div>';
+  NEWSEQ = LOGSEQ;
+  if (stick) el.scrollTop = el.scrollHeight;
+}
+function renderTerm(entries) {
+  const add = (entries || []).filter(e => e.seq > LOGSEQ);
+  if (entries && entries.length && entries[entries.length - 1].seq < LOGSEQ) { LOG = []; LOGSEQ = 0; NEWSEQ = 0; return renderTerm(entries); }   // engine restarted
+  if (!add.length) return;
+  for (const e of add) {
+    if (["PLACE", "AMEND", "CANCEL", "ENTER"].includes(e.k) || (e.s === "T" && e.k === "EXIT")) tcount.msgs++;
+    if (["FILL", "EXIT"].includes(e.k) && e.s === "C" || (e.s === "T" && e.k !== "ENTER" && e.k !== "EXIT")) tcount.fills++;
+    if (e.k === "FLAT") tcount.trips++;
+  }
+  LOGSEQ = add[add.length - 1].seq; LOG.push(...add);
+  if (LOG.length > 800) LOG.splice(0, LOG.length - 800);
+  $("tMsgs").textContent = tcount.msgs.toLocaleString(); $("tFills").textContent = tcount.fills.toLocaleString(); $("tTrips").textContent = tcount.trips.toLocaleString();
+  if (!TPAUSE) drawTerm();
+}
+document.querySelectorAll(".tseg button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tseg button").forEach(x => x.classList.toggle("on", x === b));
+  TF = b.dataset.f; NEWSEQ = LOGSEQ; drawTerm(); $("term").scrollTop = $("term").scrollHeight;
+});
+$("tPause").onclick = () => {
+  TPAUSE = !TPAUSE; $("tPause").classList.toggle("on", TPAUSE); $("tPause").setAttribute("aria-pressed", TPAUSE);
+  $("tPause").textContent = TPAUSE ? "Paused · resume" : "Pause"; if (!TPAUSE) drawTerm();
+};
 function applyZoom() {
   if (LASTMID == null) return;
   zooming = true;

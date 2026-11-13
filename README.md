@@ -16,6 +16,8 @@ Its data comes from `paper_trade.py` on the backend: `strategies {A, C, T}` (gro
 Depth heatmap: `heat` = newest columns `[ts, lowest tick, best bid tick, best ask tick, sizes[301]]` (resting size at each tick
 from the lowest one up, ±150 ticks around the mid, one column per 300 ms) and `trades_heat` = `[t0, t1, tick, buy volume, sell volume]`.
 `state.json` carries only the newest columns; `heat.json` holds the last 2 minutes and is read once when the page opens.
+Algorithm terminal: `log` = newest lines `{seq, t (ms), s: M model | C NSQ-MM | T taker, k: SIGNAL | PLACE | AMEND | CANCEL | LIVE |
+FILL | EXIT | ENTER | FLAT, m: text}`; `seq` only grows, so the page appends lines with a higher `seq` (a lower one means the engine restarted).
 
 ## Data contract (`state.json`, published by `live_predict.py`)
 `mode`, `symbol`, `updated`, `ticks`, `resolved`, `horizon`, `accuracy`, `rolling`, `majority`,
