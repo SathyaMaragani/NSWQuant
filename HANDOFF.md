@@ -31,7 +31,7 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
    develop the NIFTY side unless asked.
 5. When the user says **stop**, stop the work but **keep running processes, browser tabs and open (simulated) orders
    alive** — they said exactly this: "keep the tabs and orders placed open and stop it".
-6. Don't commit or push unless asked. (Nothing from the latest round of work is committed — see §4.)
+6. Don't commit or push unless asked. (Everything up to this handoff is committed and pushed — see §4.)
 
 ---
 
@@ -43,8 +43,8 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
   the "traps" in §8).
 - Has asked for: light, professional "quant/HFT firm" UI; Bookmap-style heatmap; a trading-platform view (order book,
   trade book, positions); a simple animated loader (replaced an elaborate canvas one).
-- Pending decisions the user has **not** answered yet: push? mirror the page changes to `frontend` (§4)? connect a
-  broker demo account (§11)? continue the retail-strategy research (§11)?
+- Pending decisions the user has **not** answered yet: connect a broker demo account (§11)? continue the
+  retail-strategy research (§11)?
 
 ---
 
@@ -55,11 +55,13 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
   `github.com/SathyaMaragani/NSWQuant` (note the repo name spelling).
 - Branches: **`backend`** (current, main working branch; code + web pages) and **`frontend`** (web pages + sample JSON
   data contracts only: `web/*.html`, `web/fx.*`, `web/paper_state.json`, `web/paper_heat.json`, `web/state.json`,
-  `web/results_data.json`, vendored ECharts/GSAP). Last commits: backend `c946934` (plus the commit that updated this
-  section), frontend `bb098f7`.
+  `web/results_data.json`, vendored ECharts/GSAP). Both are **pushed to `origin`**: backend at `c946934` plus small
+  HANDOFF-only commits after it, frontend at `664c821`.
 - **All work is committed on `backend`** in `c946934` ("Live algorithm X with a live Binance signal, trading desk,
-  retail-fee strategy research, handoff doc"); the working tree was clean after it. **Nothing is pushed**, and the
-  **`frontend` branch has not been updated** with these page changes yet. What that commit contains:
+  retail-fee strategy research, handoff doc"). Its page changes are **mirrored to `frontend` in `664c821`**, together
+  with a fresh `paper_state.json` / `paper_heat.json` snapshot (with the new `desk`, `strategies.X`, `x` fields) and the
+  frontend README's data contract. `web/dashboard.html` differs between the branches but was not part of this work and
+  was left alone. What `c946934` contains:
 
 | file | change | made by |
 |---|---|---|
@@ -74,7 +76,8 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
 
 - Future commits: commit to `backend`; the user's earlier pattern was one descriptive commit per feature. Page changes
   were previously mirrored to the `frontend` branch (`web/trading.html`, `web/fx.js`, `web/fx.css`, and sample data
-  if the state schema changed) — that mirror is outstanding for `c946934`; ask before doing it. Don't push unless asked.
+  if the state schema changed, plus the frontend README's data contract) — keep doing that, using a separate
+  `git worktree` so the shared checkout never switches branch. Don't push unless asked.
   End commit messages without attribution lines.
 
 ---
@@ -297,7 +300,7 @@ shell. Plan: hard-code the demo domain, selftest that fails if a mainnet trading
 is expected to lose there; it proves the pipeline, not profitability.** Zerodha has no paper API; Binance futures
 testnet has a separate thin book.
 
-**C. Git follow-ups** (ask first): push `backend`; mirror the page changes of `c946934` to `frontend` (§4).
+**C. Git**: nothing outstanding — both branches are committed, mirrored and pushed (§4).
 
 ---
 
