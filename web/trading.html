@@ -39,7 +39,7 @@
   .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.4s ease-in-out infinite; }
   @keyframes blink { 50% { opacity: .25; } }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
-  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .kpis { display: grid; grid-template-columns: 1.5fr repeat(5, 1fr); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
   .kpis .card { border: 0; border-radius: 0; border-left: 1px solid var(--line); padding: 16px 18px; }
   .kpis .card:first-child { border-left: 0; }
   .card.hero { background: linear-gradient(90deg, var(--brand-soft), #f9fbff 75%); position: relative; }
@@ -47,6 +47,9 @@
   .label { font: 600 11px/1.3 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
   .tag { font: 600 10.5px/1 var(--mono); padding: 3px 5px; border-radius: 3px; margin-right: 6px; letter-spacing: 0; }
   .tA { background: #eef1f5; color: var(--ink2); } .tC { background: var(--brand-soft); color: var(--brand); } .tT { background: #f3ecfb; color: #6b3fb8; }
+  .tX { background: var(--ink); color: #fff; }
+  .xsig { margin: -2px 0 10px; padding: 8px 10px; border-radius: 6px; background: var(--panel2); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .xsig b { color: var(--ink); } .xsig.warm { background: var(--amber-soft); border-color: #f2d6a8; }
   .big { font: 600 32px/1.1 var(--sans); color: var(--ink); margin: 12px 0 6px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .sub { font-size: 12.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
   .pos { color: var(--bid) !important; } .neg { color: var(--ask) !important; }
@@ -116,6 +119,46 @@
   td { color: var(--ink); font-family: var(--mono); font-size: 12px; }
   .scroll { max-height: 240px; overflow: auto; }
   .note { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  /* trading desk: depth ladder | positions + order/trade book | time & sales */
+  .desk { display: grid; grid-template-columns: 330px minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
+  .ladder td, .ladder th { padding: 3px 6px; font-size: 12px; text-align: right; border-bottom: 1px solid #f3f5f8; }
+  .ladder th:nth-child(1), .ladder td:nth-child(1) { text-align: left; width: 22%; }
+  .ladder th:nth-child(2), .ladder td:nth-child(2) { text-align: right; }
+  .ladder td:nth-child(3) { text-align: center; font-weight: 600; }
+  .ladder th:nth-child(3) { text-align: center; }
+  .ladder th:nth-child(5), .ladder td:nth-child(5) { text-align: right; width: 22%; }
+  .ladder .bq { background: linear-gradient(270deg, var(--bid-soft) var(--w), transparent var(--w)); }
+  .ladder .aq { background: linear-gradient(90deg, var(--ask-soft) var(--w), transparent var(--w)); text-align: left !important; }
+  .ladder tr.b td:nth-child(3) { color: var(--bid); } .ladder tr.a td:nth-child(3) { color: var(--ask); }
+  .ladder tr.touch td { font-weight: 600; }
+  .ladder tr.mine td:nth-child(3) { box-shadow: inset 0 0 0 1.5px var(--brand); border-radius: 3px; }
+  .ladder tr.spr td { text-align: center !important; background: var(--panel2); color: var(--ink2); font: 500 11.5px var(--sans); padding: 5px; }
+  .otag { display: inline-block; font: 600 10.5px/1 var(--mono); padding: 3px 5px; border-radius: 3px; margin: 0 2px; white-space: nowrap; }
+  .otag.C { background: var(--brand); color: #fff; } .otag.X { background: var(--ink); color: #fff; } .otag.A { background: #dfe4ec; color: var(--ink2); }
+  .otag.pend { opacity: .55; outline: 1px dashed currentColor; }
+  .hscroll { overflow-x: auto; }
+  .hscroll.tall { height: 318px; overflow-y: auto; border-top: 1px solid var(--line); }
+  .blot { min-width: 640px; }
+  .blot th { position: sticky; top: 0; background: var(--panel); z-index: 1; white-space: nowrap; }
+  .blot td { white-space: nowrap; font-size: 11.5px; padding: 5px 6px; }
+  .blot tr.sel td { background: var(--brand-soft); }
+  .blot tr.flash td { animation: rowflash 2.4s ease-out; }
+  @keyframes rowflash { from { background: #fff1bf; } to { background: transparent; } }
+  .st { display: inline-block; font: 600 10px/1 var(--sans); letter-spacing: .06em; padding: 3px 6px; border-radius: 3px; }
+  .st.OPEN { background: var(--brand-soft); color: var(--brand); } .st.PENDING { background: var(--amber-soft); color: var(--amber); }
+  .st.COMPLETE { background: var(--bid-soft); color: var(--bid); } .st.CANCELLED { background: #eef1f5; color: var(--muted); }
+  .st.REJECTED { background: var(--ask-soft); color: var(--ask); }
+  .btabs { display: flex; align-items: center; gap: 4px; margin-top: 14px; padding-bottom: 8px; flex-wrap: wrap; }
+  .btabs [role=tab] { border: 0; background: none; font: 600 12.5px var(--sans); color: var(--ink2); padding: 7px 10px; border-radius: 5px; cursor: pointer; }
+  .btabs [role=tab] b { font: 600 11px var(--mono); background: #eef1f5; border-radius: 9px; padding: 1px 7px; margin-left: 4px; }
+  .btabs [role=tab].on { background: var(--ink); color: #fff; } .btabs [role=tab].on b { background: rgba(255,255,255,.18); }
+  .btabs [role=tab]:focus-visible, .seg button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .seg.sm button { padding: 4px 9px; font-size: 11.5px; }
+  .tapebox { height: 520px; overflow: auto; }
+  .tape { min-width: 0; } .tape td:nth-child(2) { font-weight: 600; }
+  .empty td { text-align: center !important; color: var(--muted); font-family: var(--sans); padding: 18px; }
+  @media (max-width: 1350px) { .desk { grid-template-columns: 330px minmax(0, 1fr); } .desk > .card:last-child { grid-column: 1 / -1; } .tapebox { height: 260px; } }
+  @media (max-width: 860px) { .desk { grid-template-columns: 1fr; } }
   @media (max-width: 1350px) { .kpis { grid-template-columns: repeat(3, 1fr); } .kpis .card:nth-child(n+4) { border-top: 1px solid var(--line); } .kpis .card:nth-child(4) { border-left: 0; } .row2, .row3 { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .main, .top-in { padding-left: 16px; padding-right: 16px; } .kpis { grid-template-columns: 1fr; } .kpis .card { border-left: 0 !important; border-top: 1px solid var(--line); } .kpis .card:first-child { border-top: 0; } .vsep { display: none; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
@@ -125,7 +168,7 @@
 <header class="top"><div class="top-in">
   <div class="brand"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="5" fill="#0d1626"/><path d="M6 18 L10.5 8.5 L15 15 L20 7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE<span>Quant</span></div>
   <div class="vsep"></div>
-  <div class="instr"><b id="sym">ETHUSDT PERP</b><small>NSQ-MM · paper trading</small></div>
+  <div class="instr"><b id="sym">ETHUSDT PERP</b><small>Algorithm X · paper trading</small></div>
   <nav class="tabs" aria-label="Pages"><a class="on" href="./" aria-current="page">Live paper trading</a><a href="results.html">Results</a></nav>
   <span class="pill" id="live"><span class="dot"></span><span id="liveTxt">Connecting</span></span>
   <span class="sub" id="upd">–</span>
@@ -134,26 +177,35 @@
 </div></header>
 <div id="mq"></div>
 <main class="main">
-  <section class="fx-hero">
-    <div class="fx-hero-copy">
-      <div>
-        <div class="fx-eyebrow">Live · Bybit ETHUSDT perpetual</div>
-        <h1 class="fx-h1">Market making, <i>in real&nbsp;time.</i></h1>
-        <p class="fx-lede">NSQ-MM quotes both sides of the live Bybit order book, steered by a 532-byte integer model that decides in
-          microseconds. Every order is simulated against the real feed with latency and queue position; nothing is sent to the exchange.</p>
-      </div>
-      <div class="fx-stats">
-        <div><div class="l">NSQ-MM, this session</div><div class="v" id="hP">–</div></div>
-        <div><div class="l">Fills</div><div class="v" id="hF">–</div></div>
-        <div><div class="l">Decision time</div><div class="v" id="hD">–</div></div>
-      </div>
+  <section class="desk" aria-label="Trading desk">
+    <div class="card">
+      <div class="head"><h2>Market depth</h2><span class="sub" id="dSpread">–</span></div>
+      <table class="ladder" id="ladder" aria-label="Order book, ten levels each side, with our working orders"></table>
+      <div class="note" id="dNote">Bybit live book · our working orders tagged at their price</div>
     </div>
-    <div class="fx-stage" id="terrain" aria-label="Live depth chart: cumulative resting size on the bid side (green, left) and ask side (red, right) around the mid price, with the last few seconds as faint lines">
-      <div class="fx-cap"><span><b>LIVE DEPTH</b> · cumulative resting size · ±40 ticks around the mid</span><span>faint lines = the last 12 s</span></div>
+    <div class="card">
+      <div class="head"><h2>Positions</h2>
+        <div class="seg" role="group" aria-label="Strategy shown in orders and trades" id="dStrat">
+          <button class="on" data-s="X">Algorithm X + Model</button><button data-s="C">C · NSQ-MM</button><button data-s="A">A · no model</button><button data-s="T">T · taker</button><button data-s="all">All</button>
+        </div></div>
+      <div class="xsig" id="xsig">–</div>
+      <div class="hscroll"><table class="blot" id="posTbl"></table></div>
+      <div class="btabs" role="tablist" aria-label="Orders and trades">
+        <button role="tab" class="on" data-b="orders" aria-selected="true">Order book <b id="nOpen">0</b></button>
+        <button role="tab" data-b="trades" aria-selected="false">Trade book <b id="nTr">0</b></button>
+        <span class="grow"></span>
+        <div class="seg sm" role="group" aria-label="Order filter" id="oFilt"><button class="on" data-o="all">All</button><button data-o="open">Open</button><button data-o="done">Executed</button><button data-o="x">Cancelled</button></div>
+      </div>
+      <div class="hscroll tall"><table class="blot" id="blot"></table></div>
+    </div>
+    <div class="card">
+      <div class="head"><h2>Time &amp; sales</h2><span class="sub">market trades</span></div>
+      <div class="tapebox"><table class="blot tape" id="tape"></table></div>
     </div>
   </section>
   <section class="kpis">
-    <div class="card hero"><div class="label"><span class="tag tC">C</span>NSQ-MM P&amp;L</div><div class="big" id="pC">–</div><div class="sub" id="sC">–</div></div>
+    <div class="card hero"><div class="label"><span class="tag tX">X</span>Algorithm X + Model · net, MM fee tier (as tested)</div><div class="big" id="pX">–</div><div class="sub" id="sX">–</div></div>
+    <div class="card"><div class="label"><span class="tag tC">C</span>NSQ-MM P&amp;L</div><div class="big" id="pC">–</div><div class="sub" id="sC">–</div></div>
     <div class="card"><div class="label"><span class="tag tA">A</span>Market maker, no model</div><div class="big" id="pA">–</div><div class="sub" id="sA">–</div></div>
     <div class="card"><div class="label"><span class="tag tT">T</span>TinyML signal taker</div><div class="big" id="pT">–</div><div class="sub" id="sT">–</div></div>
     <div class="card"><div class="label">Adverse selection · 10 s after fill</div><div class="big" id="mk">–</div><div class="sub" id="mkSub">ticks per fill, NSQ-MM vs no model</div></div>
@@ -165,21 +217,21 @@
       <div class="head"><h2>Order-book depth &amp; traded volume</h2>
         <div class="tools">
           <label class="contrast">Contrast <input type="range" id="contrast" min="85" max="100" value="99" aria-label="Heatmap contrast: percentile of resting size that maps to the brightest colour"></label>
-          <div class="seg" role="group" aria-label="Price range"><button class="on" data-zoom="follow">Follow price</button><button data-zoom="full">Full range</button></div>
+          <div class="seg" id="zoomSeg" role="group" aria-label="Price range"><button class="on" data-zoom="follow">Follow price</button><button data-zoom="full">Full range</button></div>
         </div>
         <div class="legend" style="width:100%">
           <span class="scale" title="Resting size at each price, full Bybit book">0<i></i><span id="qmax">–</span></span>
           <span><i class="ln" style="border-color:#16c784"></i>Best bid</span>
           <span><i class="ln" style="border-color:#ea3943"></i>Best ask</span>
           <span><i class="dotkey" style="background:#2ee59d"></i><i class="dotkey" style="background:#ff5a6a"></i>Traded volume · buy / sell aggressor</span>
-          <span><i class="ln" style="border-color:#6b7a99;border-top-style:dashed"></i>Our quotes</span>
-          <span><svg width="12" height="12"><path d="M6 1 L11 10 L1 10 Z" fill="#0b8457"/></svg><svg width="12" height="12"><path d="M6 11 L11 2 L1 2 Z" fill="#c92f3d"/></svg>Our fills</span>
+          <span><i class="ln" style="border-color:#6b7a99;border-top-style:dashed"></i>Our working orders · <b id="qWho">–</b></span>
+          <span><svg width="12" height="12"><path d="M6 1 L11 10 L1 10 Z" fill="#0b8457"/></svg><svg width="12" height="12"><path d="M6 11 L11 2 L1 2 Z" fill="#c92f3d"/></svg>Our fills · <b id="fWho">–</b></span>
         </div></div>
       <div class="well"><div id="price" role="img" aria-label="Depth heatmap: resting order-book size by price over time on a dark background, traded volume as dots, best bid and ask lines, NSQ-MM quotes and fills, and the current book on the right"></div></div>
       <div class="chartfoot">Brighter = more resting size (Bybit 200-level book, ±150 ticks around the mid, a column every 300 ms, last 2 min). Dots: traded volume per price per column. Right edge: current book. Scroll on the chart to zoom the price axis, drag to pan. <b id="hov" style="color:var(--ink);font-family:var(--mono);font-weight:500"></b></div>
     </div>
     <div class="card">
-      <div class="head"><h2>The algorithm, live</h2></div>
+      <div class="head"><h2>C · NSQ-MM, step by step</h2></div>
       <div class="steps">
         <div class="step"><h3>1 · PREDICT</h3>
           <div class="probs"><i id="bD" style="background:#c92f3d;width:33%"></i><i id="bF" style="background:#b4bcc8;width:34%"></i><i id="bU" style="background:#0b8457;width:33%"></i></div>
@@ -203,7 +255,7 @@
       <span class="sim" title="Orders are simulated against the live public Bybit feed; nothing is sent to an exchange">Simulated orders · live market data</span>
       <span class="stat">msgs <b id="tMsgs">0</b> · fills <b id="tFills">0</b> · round trips <b id="tTrips">0</b></span>
       <div class="tseg" role="group" aria-label="Filter terminal lines">
-        <button class="on" data-f="all">All</button><button data-f="C">NSQ-MM</button><button data-f="T">Taker</button><button data-f="fills">Fills &amp; exits</button>
+        <button class="on" data-f="all">All</button><button data-f="X">Algo X</button><button data-f="C">NSQ-MM</button><button data-f="T">Taker</button><button data-f="fills">Fills &amp; exits</button>
       </div>
       <button class="tbtn" id="tPause" aria-pressed="false">Pause</button>
     </div>
@@ -213,7 +265,7 @@
   <section class="row3">
     <div class="card">
       <div class="head"><h2>P&amp;L before fees, this session</h2>
-        <div class="legend"><span><i class="ln" style="border-color:#1f4fd6"></i>C NSQ-MM</span><span><i class="ln" style="border-color:#9aa6b8"></i>A no model</span><span><i class="ln" style="border-color:#8b5cd6"></i>T taker</span></div></div>
+        <div class="legend"><span><i class="ln" style="border-color:#0d1626"></i>Algorithm X + Model</span><span><i class="ln" style="border-color:#1f4fd6"></i>C NSQ-MM</span><span><i class="ln" style="border-color:#9aa6b8"></i>A no model</span><span><i class="ln" style="border-color:#8b5cd6"></i>T taker</span></div></div>
       <div id="equity" role="img" aria-label="Session P&L of the three strategies"></div>
     </div>
     <div class="card">
@@ -336,6 +388,7 @@ equity.setOption({
   xAxis: { type: "time", axisLabel: { color: INK2, fontFamily: "IBM Plex Mono", fontSize: 11, formatter: "{HH}:{mm}", hideOverlap: true }, splitLine: { show: false } },
   yAxis: { type: "value", scale: true, axisLabel: { color: INK2 }, splitLine: { lineStyle: { color: GRID } } },
   series: [
+    { id: "X", name: "Algorithm X + Model", type: "line", showSymbol: false, data: [], lineStyle: { color: INK, width: 2.4 } },
     { id: "C", name: "C NSQ-MM", type: "line", showSymbol: false, data: [], lineStyle: { color: BRAND, width: 2.2 } },
     { id: "A", name: "A no model", type: "line", showSymbol: false, data: [], lineStyle: { color: "#9aa6b8", width: 1.8 } },
     { id: "T", name: "T taker", type: "line", showSymbol: false, data: [], lineStyle: { color: "#8b5cd6", width: 1.8 } },
@@ -356,6 +409,23 @@ function render(S) {
   for (const k of ["C", "A", "T"]) {
     const s = st[k]; pnl("p" + k, s);
     $("s" + k).textContent = `after VIP0 fees ${usd(s.net_vip0)} · ${s.fills} fills · pos ${s.position.toFixed(2)}`;
+  }
+  const X = st.X, XP = S.x;
+  if (X) {
+    const el = $("pX"), g = X.signal;
+    el.textContent = usd(X.net) + " USDT"; el.className = "big " + (X.net >= 0 ? "pos" : "neg");
+    $("sX").innerHTML = `before fees ${usd(X.gross)} · maker rebate ${usd(-X.fees)} (${XP.maker_bps} bp) · <b>at retail fees ${usd(X.net_vip0)}</b> · ${X.fills} fills · pos ${X.position.toFixed(2)}`;
+    const xs = $("xsig");
+    xs.className = "xsig" + (g.warmup_s_left > 0 || g.z == null ? " warm" : "");
+    const mmss = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    if (g.warmup_s_left > 0) xs.innerHTML = `<b>X is warming up</b> · rebuilding Binance's ±2–3 % order book from its live feed (${g.synced ? "synced" : "connecting"});` +
+      ` signal history starts in <b>${mmss(g.warmup_s_left)}</b>, quotes about 2 min later`;
+    else if (g.z == null) xs.innerHTML = `<b>X is sitting out</b> · ${g.synced ? `collecting Binance snapshots for the z-score (${g.snapshots} of 4, one every 30 s)` : "Binance feed reconnecting"}; no quotes until the signal is ready`;
+    else {
+      const lean = XP.c1_bp * g.z, act = lean > XP.half_bp ? "bid at the best bid, ask stands back (expects a rise)" : lean < -XP.half_bp ? "ask at the best ask, bid stands back (expects a fall)" : "both quotes stand back from the touch";
+      xs.innerHTML = `<b>Algorithm X + Model</b> · Binance ±2–3 % book imbalance ${g.imbalance == null ? "–" : (g.imbalance >= 0 ? "+" : "") + g.imbalance.toFixed(3)} · z <b>${g.z >= 0 ? "+" : ""}${g.z.toFixed(2)}</b>` +
+        ` → fair value ${lean >= 0 ? "+" : ""}${lean.toFixed(2)} bp vs mid → ${act} · ${g.snapshots} snapshots in the 1 h window`;
+    }
   }
   const mC = st.C.markout10s_ticks, mA = st.A.markout10s_ticks;
   $("mk").innerHTML = mC == null ? "–" : `<span class="${mC >= (mA ?? -1e9) ? "pos" : "neg"}">${mC.toFixed(1)}</span> <span style="font-size:18px;color:#8590a2">vs ${mA == null ? "–" : mA.toFixed(1)}</span>`;
@@ -380,17 +450,17 @@ function render(S) {
       `κ = ${P.kappa}, skew = ${P.inv_skew} tick/unit, half-spread = ${P.half} tick, pull when confidence ≥ ${(100 * P.tau_pull).toFixed(0)}%`;
   }
   const ser = S.series;
-  const fC = S.fills.filter(f => f.strategy === "C" && ser.length && f.t >= ser[0][0]);
+  LASTS = S;
   if (S.tick) TICK = S.tick;
   mergeHeat(S.heat, S.trades_heat);
   HIMG = buildHeat();
-  TER.update(HC, TICK);
+  renderDesk(S.desk);
+  trackQuotes(S);
   const hc = S.strategies.C;
-  $("hP").innerHTML = `<span class="${hc.gross >= 0 ? "pos" : "neg"}">${usd(hc.gross)}</span><small>USDT</small>`;
-  $("hF").textContent = hc.fills.toLocaleString();
-  $("hD").innerHTML = `${S.latency.decide_p50_us.toFixed(0)}<small>µs</small>`;
   const Lm = S.last || {}, sp = Lm.ask != null && Lm.bid != null ? Lm.ask - Lm.bid : null;
-  MQ.set([["ETHUSDT", px(Lm.mid)], ["SPREAD", sp == null ? "–" : sp.toFixed(2)], ["NSQ-MM P&L", usd(hc.gross) + " USDT", hc.gross >= 0 ? "pos" : "neg"],
+  MQ.set([["ETHUSDT", px(Lm.mid)], ["SPREAD", sp == null ? "–" : sp.toFixed(2)],
+    ...(X ? [["ALGO X NET", usd(X.net) + " USDT", X.net >= 0 ? "pos" : "neg"], ["X AT RETAIL FEES", usd(X.net_vip0) + " USDT", X.net_vip0 >= 0 ? "pos" : "neg"]] : []),
+    ["NSQ-MM P&L", usd(hc.gross) + " USDT", hc.gross >= 0 ? "pos" : "neg"],
     ["FILLS", hc.fills.toLocaleString()], ["POSITION", hc.position.toFixed(2)], ["DECISION", S.latency.decide_p50_us.toFixed(1) + " µs"],
     ["MODEL", "532 B int8"], ["BOOK EVENTS", S.book_events.toLocaleString()], ["TRADES SEEN", S.trades.toLocaleString()],
     ["BACKTEST · X ETH 9 DAYS", "+727.03 USDT", "pos"], ["ORDERS", "SIMULATED"]]);
@@ -419,14 +489,11 @@ function render(S) {
       lineStyle: { color: "#e6ebf5", type: "dotted", width: 1, opacity: .5 },
       label: { position: "insideEndTop", formatter: () => px(LASTMID), backgroundColor: "#e6ebf5", color: "#0b1020", padding: [3, 6], borderRadius: 3, fontFamily: "IBM Plex Mono", fontSize: 11 },
       data: [{ yAxis: LASTMID }] } },
-    { id: "qb", data: ser.map(r => [r[0], r[4]]) },
-    { id: "qa", data: ser.map(r => [r[0], r[5]]) },
-    { id: "buy", data: fC.filter(f => f.side > 0).map(f => [f.t, f.price]) },
-    { id: "sell", data: fC.filter(f => f.side < 0).map(f => [f.t, f.price]) },
+    ...ourSeries(S),
   ] });
   applyZoom();
   renderTerm(S.log);
-  equity.setOption({ series: ["C", "A", "T"].map(k => ({ id: k, data: S.equity[k] })) });
+  equity.setOption({ series: ["X", "C", "A", "T"].map(k => ({ id: k, data: S.equity[k] || [] })) });
   const name = { A: '<span class="tag tA">A</span>', C: '<span class="tag tC">C</span>', T: '<span class="tag tT">T</span>' };
   $("fills").innerHTML = "<tr><th>Time</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th></tr>" +
     S.fills.slice().reverse().slice(0, 30).map(f => `<tr><td>${new Date(f.t).toLocaleTimeString()}</td><td>${name[f.strategy]}</td>` +
@@ -439,6 +506,132 @@ function render(S) {
     $("bt").dataset.done = 1;
   }
 }
+// ---------------------------------------------------------------- trading desk: depth, positions, order book, trade book, tape
+let DS = "X", DB = "orders", DO = "all", LASTDESK = null;
+const SEENTR = new Set(), POSN = {};
+let DESKFIRST = true;
+const SNAME = { X: "X · Algorithm X + Model", C: "C · NSQ-MM", A: "A · no model", T: "T · taker" };
+const stag = k => `<span class="tag t${k}">${k}</span>`;
+const qty = v => v == null ? "–" : (+v).toFixed(2).replace(/\.?0+$/, "") || "0";
+const sgn = v => v == null ? "–" : `<span class="${v >= 0 ? "pos" : "neg"}">${usd(v)}</span>`;
+const side = s => `<span class="${s > 0 ? "pos" : "neg"}">${s > 0 ? "BUY" : "SELL"}</span>`;
+const ms = t => { const d = new Date(t); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
+const openSt = o => o.status === "OPEN" || o.status === "PENDING";
+function renderDesk(D) {
+  if (!D) return;
+  LASTDESK = D;
+  const B = D.books, ALL = ["X", "C", "A", "T"].filter(k => B[k]), keys = DS === "all" ? ALL : B[DS] ? [DS] : ["C"];
+  // ladder: ten levels each side, our working limit orders tagged at their price
+  const work = {};
+  for (const k of ["X", "C", "A"].filter(k => B[k])) for (const o of B[k].orders) if (openSt(o) && o.px != null) {
+    const key = (o.side > 0 ? "b" : "a") + Math.round(o.px / TICK);
+    (work[key] = work[key] || []).push(o);
+  }
+  const tags = key => (work[key] || []).map(o => `<span class="otag ${o.s}${o.status === "PENDING" ? " pend" : ""}" title="${o.id} · ${o.status}">${o.s} ${qty(o.qty)}</span>`).join("");
+  const dp = D.depth, onLadder = new Set();
+  if (dp) {
+    const mx = Math.max(...dp.bq, ...dp.aq), w = q => (100 * q / mx).toFixed(1) + "%";
+    // a level of our own that the market has no size at is still a row: merge our prices into each side's ladder
+    const lvls = (sd, P, Q) => {
+      const m = new Map(P.map((p, i) => [Math.round(p / TICK), Q[i]])), edge = Math.round(P[P.length - 1] / TICK);
+      for (const k of Object.keys(work)) if (k[0] === sd) { const t = +k.slice(1); if (sd === "a" ? t <= edge : t >= edge) m.has(t) || m.set(t, 0); }
+      return [...m.entries()].sort((x, y) => sd === "a" ? x[0] - y[0] : y[0] - x[0]);
+    };
+    const A = lvls("a", dp.ap, dp.aq), Bd = lvls("b", dp.bp, dp.bq), cell = q => q > 0 ? qfmt(q) : "–";
+    const rows = ["<tr><th>Our bids</th><th>Bid qty</th><th>Price</th><th>Ask qty</th><th>Our asks</th></tr>"];
+    for (let i = A.length - 1; i >= 0; i--) {
+      const [t, q] = A[i], key = "a" + t; onLadder.add(key);
+      rows.push(`<tr class="a${t === Math.round(dp.ap[0] / TICK) ? " touch" : ""}${work[key] ? " mine" : ""}"><td></td><td></td><td>${px(t * TICK)}</td><td class="aq" style="--w:${w(q)}">${cell(q)}</td><td>${tags(key)}</td></tr>`);
+    }
+    const spr = dp.ap[0] - dp.bp[0];
+    rows.push(`<tr class="spr"><td colspan="5">Spread ${spr.toFixed(2)} · ${Math.round(spr / TICK)} tick${Math.round(spr / TICK) === 1 ? "" : "s"} · mid ${px((dp.ap[0] + dp.bp[0]) / 2)}</td></tr>`);
+    Bd.forEach(([t, q]) => {
+      const key = "b" + t; onLadder.add(key);
+      rows.push(`<tr class="b${t === Math.round(dp.bp[0] / TICK) ? " touch" : ""}${work[key] ? " mine" : ""}"><td>${tags(key)}</td><td class="bq" style="--w:${w(q)}">${cell(q)}</td><td>${px(t * TICK)}</td><td></td><td></td></tr>`);
+    });
+    $("ladder").innerHTML = rows.join("");
+    $("dSpread").textContent = `best ${px(dp.bp[0])} / ${px(dp.ap[0])}`;
+  }
+  const off = Object.keys(work).filter(k => !onLadder.has(k)).flatMap(k => work[k]);
+  $("dNote").innerHTML = off.length ? "Outside the top 10: " + off.map(o => `${o.s} ${o.side > 0 ? "bid" : "ask"} ${px(o.px)}`).join(" · ")
+    : "Bybit live book · our working orders tagged at their price (dashed = in flight)";
+  // positions, one row per strategy; a row flashes when it trades
+  const pr = ["<tr><th>Strategy</th><th>Net qty</th><th>Avg price</th><th>Mark (mid)</th><th>Unrealised</th><th>Realised</th><th title=\"Negative = fees paid, positive = maker rebate received\">Fees / rebate</th><th>Net P&amp;L</th><th>Bought</th><th>Sold</th></tr>"];
+  for (const k of ALL) {
+    const b = B[k], p = b.position, fl = POSN[k] != null && b.n_trades > POSN[k];
+    POSN[k] = b.n_trades;
+    pr.push(`<tr class="${keys.includes(k) && DS !== "all" ? "sel" : ""}${fl ? " flash" : ""}"><td>${stag(k)}${SNAME[k].slice(4)}</td>` +
+      `<td class="${p.qty > 0 ? "pos" : p.qty < 0 ? "neg" : ""}">${p.qty > 0 ? "+" : ""}${qty(p.qty)}</td><td>${p.avg == null ? "–" : px(p.avg)}</td><td>${px(p.mark)}</td>` +
+      `<td>${sgn(p.unrealised)}</td><td>${sgn(p.realised)}</td><td>${(-p.fees).toFixed(2)}</td><td><b>${sgn(p.net)}</b></td>` +
+      `<td>${qty(p.buy_qty)} @ ${p.buy_avg == null ? "–" : px(p.buy_avg)}</td><td>${qty(p.sell_qty)} @ ${p.sell_avg == null ? "–" : px(p.sell_avg)}</td></tr>`);
+  }
+  $("posTbl").innerHTML = pr.join("");
+  // order book / trade book for the selected strategy
+  const orders = keys.flatMap(k => B[k].orders), trades = keys.flatMap(k => B[k].trades);
+  $("nOpen").textContent = orders.filter(openSt).length; $("nTr").textContent = keys.reduce((a, k) => a + B[k].n_trades, 0).toLocaleString();
+  let html;
+  if (DB === "orders") {
+    const keep = { all: () => true, open: openSt, done: o => o.status === "COMPLETE", x: o => o.status === "CANCELLED" || o.status === "REJECTED" }[DO];
+    const rows = orders.filter(keep).sort((a, b) => (openSt(b) - openSt(a)) || (b.t - a.t)).slice(0, 120);
+    html = "<tr><th>Time</th><th>Order ID</th><th>Strategy</th><th>Type</th><th>Side</th><th>Price</th><th>Qty</th><th>Filled</th><th>Avg</th><th>Status</th><th>Detail</th></tr>" +
+      (rows.length ? rows.map(o => {
+        const info = o.status === "OPEN" ? (o.q >= 1e11 ? "behind the visible book" : `queue ahead ${qty(o.q)}`) + (o.mods ? ` · modified ×${o.mods}` : "")
+          : o.status === "PENDING" ? `in flight · ${o.s === "X" ? "10 µs" : "50 ms"} latency` : o.status === "COMPLETE" ? `filled ${ms(o.tu)}` : o.note || (o.status === "CANCELLED" ? `cancelled ${ms(o.tu)}` : "");
+        return `<tr><td>${ms(o.t)}</td><td>${o.id}</td><td>${stag(o.s)}</td><td>${o.type}</td><td>${side(o.side)}</td><td>${o.px == null ? "MKT" : px(o.px)}</td>` +
+          `<td>${qty(o.qty)}</td><td>${qty(o.filled)}</td><td>${o.avg == null ? "–" : px(o.avg)}</td><td><span class="st ${o.status}">${o.status}</span></td><td style="text-align:left;color:#475467;font-family:var(--sans)">${info}</td></tr>`;
+      }).join("") : '<tr class="empty"><td colspan="11">No orders match</td></tr>');
+  } else {
+    const rows = trades.sort((a, b) => b.t - a.t).slice(0, 120);
+    html = "<tr><th>Time</th><th>Trade ID</th><th>Order ID</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th><th>Value (USDT)</th><th>Fee</th><th>Liquidity</th></tr>" +
+      (rows.length ? rows.map(f => `<tr class="${!DESKFIRST && !SEENTR.has(f.id) ? "flash" : ""}"><td>${ms(f.t)}</td><td>${f.id}</td><td>${f.oid}</td><td>${stag(f.s)}</td><td>${side(f.side)}</td>` +
+        `<td>${px(f.px)}</td><td>${qty(f.qty)}</td><td>${f.value.toFixed(2)}</td><td>${f.fee.toFixed(4)}</td><td>${f.maker ? "Maker" : "Taker"}</td></tr>`).join("")
+        : '<tr class="empty"><td colspan="10">No trades yet</td></tr>');
+  }
+  for (const k of ALL) for (const f of B[k].trades) SEENTR.add(f.id);
+  DESKFIRST = false;
+  $("blot").innerHTML = html;
+  $("tape").innerHTML = "<tr><th>Time</th><th>Price</th><th>Qty</th></tr>" + (D.tape || []).slice().reverse().map(([t, p, q, s]) =>
+    `<tr><td>${ms(t)}</td><td class="${s > 0 ? "pos" : "neg"}">${px(p)}</td><td>${qfmt(q)}</td></tr>`).join("");
+}
+const segPick = (id, attr, set) => document.querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
+  document.querySelectorAll(`#${id} button`).forEach(x => x.classList.toggle("on", x === b)); set(b.dataset[attr]); renderDesk(LASTDESK);
+});
+segPick("dStrat", "s", v => { DS = v; if (LASTS) price.setOption({ series: ourSeries(LASTS) }); });
+segPick("oFilt", "o", v => DO = v);
+document.querySelectorAll(".btabs [role=tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".btabs [role=tab]").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", x === b); });
+  DB = b.dataset.b; $("oFilt").style.visibility = DB === "orders" ? "visible" : "hidden"; renderDesk(LASTDESK);
+});
+// The chart's working-order lines and fill markers come from the same order book and trade book the desk shows,
+// for the strategy selected there (All: every strategy's fills, X's orders). Working-order history is recorded here,
+// one point per refresh, from the orders the order book lists as OPEN.
+let LASTS = null;
+const QH = { X: [], C: [], A: [] };
+function trackQuotes(S) {
+  const t = S.last && S.last.ts, B = S.desk && S.desk.books;
+  if (!t || !B) return;
+  const t0 = HC.length ? HC[0][0] : t - 120000;
+  for (const k of Object.keys(QH)) {
+    if (!B[k]) continue;
+    const w = { 1: null, "-1": null };
+    for (const o of B[k].orders) if (o.status === "OPEN") w[o.side] = o.px;
+    QH[k].push([t, w[1], w[-1]]);
+    while (QH[k].length && QH[k][0][0] < t0) QH[k].shift();
+  }
+}
+function ourSeries(S) {
+  const B = S.desk ? S.desk.books : {}, t0 = HC.length ? HC[0][0] : 0;
+  const ks = DS === "all" ? Object.keys(B) : [DS], q = QH[DS === "all" ? "X" : DS] || [];
+  const f = ks.flatMap(k => B[k] ? B[k].trades : []).filter(x => x.t >= t0);
+  $("qWho").textContent = DS === "all" ? SNAME.X : DS === "T" ? "none (T uses market orders)" : SNAME[DS];
+  $("fWho").textContent = DS === "all" ? "all strategies" : SNAME[DS];
+  return [
+    { id: "qb", data: q.map(r => [r[0], r[1]]) },
+    { id: "qa", data: q.map(r => [r[0], r[2]]) },
+    { id: "buy", data: f.filter(x => x.side > 0).map(x => [x.t, x.px]) },
+    { id: "sell", data: f.filter(x => x.side < 0).map(x => [x.t, x.px]) },
+  ];
+}
 async function poll() {
   try { const r = await fetch((new URLSearchParams(location.search).get("state") || "state.json") + "?ts=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw 0; render(await r.json()); }
   catch (e) { if (++fails > 3) { $("live").className = "pill off"; $("liveTxt").textContent = "Waiting for feed"; } }
@@ -448,7 +641,7 @@ async function poll() {
 // ---------------------------------------------------------------- algorithm terminal
 let LOG = [], LOGSEQ = 0, TF = "all", TPAUSE = false, NEWSEQ = 0;
 const tcount = { msgs: 0, fills: 0, trips: 0 };
-const WHO = { M: "MODEL", C: "NSQ-MM", T: "TAKER" };
+const WHO = { M: "MODEL", C: "NSQ-MM", T: "TAKER", X: "ALGO X" };
 const esc = x => String(x).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 const tclock = t => { const d = new Date(t); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
 const tkeep = e => TF === "all" || (TF === "fills" ? ["FILL", "EXIT", "FLAT"].includes(e.k) : e.s === TF);
@@ -468,7 +661,7 @@ function renderTerm(entries) {
   if (!add.length) return;
   for (const e of add) {
     if (["PLACE", "AMEND", "CANCEL", "ENTER"].includes(e.k) || (e.s === "T" && e.k === "EXIT")) tcount.msgs++;
-    if (["FILL", "EXIT"].includes(e.k) && e.s === "C" || (e.s === "T" && e.k !== "ENTER" && e.k !== "EXIT")) tcount.fills++;
+    if (["FILL", "EXIT"].includes(e.k) && (e.s === "C" || e.s === "X") || (e.s === "T" && e.k !== "ENTER" && e.k !== "EXIT")) tcount.fills++;
     if (e.k === "FLAT") tcount.trips++;
   }
   LOGSEQ = add[add.length - 1].seq; LOG.push(...add);
@@ -498,17 +691,16 @@ price.getZr().on("mousemove", e => {
   const q = c && t <= c[0] + 1000 ? c[4][tk - c[1]] : undefined;
   $("hov").textContent = q == null ? "" : `· ${tstr(c[0])} · ${px(tk * TICK)} · ${q > 0 ? qfmt(q) + " resting" : "empty"}`;
 });
-price.on("datazoom", () => { if (zooming) return; zoomMode = "manual"; document.querySelectorAll(".seg button").forEach(x => x.classList.remove("on")); });
-document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
-  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+price.on("datazoom", () => { if (zooming) return; zoomMode = "manual"; document.querySelectorAll("#zoomSeg button").forEach(x => x.classList.remove("on")); });
+document.querySelectorAll("#zoomSeg button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#zoomSeg button").forEach(x => x.classList.toggle("on", x === b));
   zoomMode = b.dataset.zoom; applyZoom();
 });
 window.addEventListener("resize", () => { price.setOption(layoutPrice()); price.resize(); equity.resize(); });
-FX.loader({ title: "Market making, <i>in real time.</i>" });
-const TER = FX.depth($("terrain"));
-FX.rise(".fx-hero, .kpis, .row2 > .card, .term, .row3 > .card");
+FX.loader({ status: ["Connecting to the live feed", "Rebuilding the order book", "Loading orders and positions"] });
+FX.rise(".desk > .card, .kpis, .row2 > .card, .term, .row3 > .card");
 FX.tilt(".kpis .card", 6);
-FX.words(".fx-h1"); FX.cursor(); FX.spotlight(".row2 > .card, .row3 > .card");
+FX.cursor(); FX.spotlight(".row2 > .card, .row3 > .card");
 const MQ = FX.marquee($("mq"));
 (async () => {
   const q = new URLSearchParams(location.search);

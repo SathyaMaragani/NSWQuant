@@ -9,16 +9,24 @@ python -m http.server 8000 -d web
 Open http://127.0.0.1:8000/dashboard.html — it reads `web/state.json` (a snapshot from a NIFTY replay) once a second.
 Edit `state.json` by hand to test edge cases (empty book, gaps, no probabilities).
 
-Paper-trading page: http://127.0.0.1:8000/trading.html?state=paper_state.json&heat=paper_heat.json (a live snapshot of the NSQ-MM paper trader).
+Paper-trading page: http://127.0.0.1:8000/trading.html?state=paper_state.json&heat=paper_heat.json (a live snapshot of the paper
+trader: algorithm X with the live Binance signal, plus A, C and T).
 Results page: http://127.0.0.1:8000/results.html?state=paper_state.json — reads `results_data.json` (built on the backend by
 `make_results.py`: strategies, per-day results and curves, delay check, accuracy, latency) and the live state for its last panel.
-Its data comes from `paper_trade.py` on the backend: `strategies {A, C, T}` (gross, net_vip0, fills, position, markout10s_ticks),
+Its data comes from `paper_trade.py` on the backend: `strategies {A, C, T, X}` (gross, net_vip0, fills, position, markout10s_ticks;
+X also has fees (negative = maker rebate), net at the MM fee tier, and `signal {z, imbalance, snapshots, synced, reach_pct,
+resyncs, warmup_s_left}`), `x` (X's frozen settings: half_bp, c1_bp, skew_bp, zcol, profile, maker_bps, max_pos, unit),
 `last` (probs, mid, fair, alpha_term, inv_term, quote_bid, quote_ask, pull flags, book), `series` [ts, mid, bid, ask, our bid, our ask],
-`equity {A, C, T}` [ts, P&L], `fills` [{t, strategy, side, price, qty}], `latency`, `params`, `backtest` rows.
+`equity {A, C, T, X}` [ts, P&L], `fills` [{t, strategy, side, price, qty}], `latency`, `params`, `backtest` rows.
+Trading desk: `desk {depth {bp, bq, ap, aq} (10 levels), tape [[ts, price, qty, aggressor side]], books {X, C, A, T}}`; each book is
+`{orders [{id, s, t, tu, side, type LIMIT|MARKET, px, qty, filled, avg, status PENDING|OPEN|COMPLETE|CANCELLED|REJECTED, mods,
+q (queue ahead; >= 1e11 = behind the visible book), note}], trades [{id, oid, s, t, side, px, qty, fee, maker, value}],
+position {qty, avg, mark, unrealised, realised, fees, net, buy_qty, buy_avg, sell_qty, sell_avg}, open, n_orders, n_trades}`.
+The chart's working-order lines and fill markers are drawn from `desk.books` for the strategy selected on the desk.
 Depth heatmap: `heat` = newest columns `[ts, lowest tick, best bid tick, best ask tick, sizes[301]]` (resting size at each tick
 from the lowest one up, ±150 ticks around the mid, one column per 300 ms) and `trades_heat` = `[t0, t1, tick, buy volume, sell volume]`.
 `state.json` carries only the newest columns; `heat.json` holds the last 2 minutes and is read once when the page opens.
-Algorithm terminal: `log` = newest lines `{seq, t (ms), s: M model | C NSQ-MM | T taker, k: SIGNAL | PLACE | AMEND | CANCEL | LIVE |
+Algorithm terminal: `log` = newest lines `{seq, t (ms), s: M model | C NSQ-MM | T taker | X algorithm X, k: SIGNAL | PLACE | AMEND | CANCEL | LIVE |
 FILL | EXIT | ENTER | FLAT, m: text}`; `seq` only grows, so the page appends lines with a higher `seq` (a lower one means the engine restarted).
 
 ## Data contract (`state.json`, published by `live_predict.py`)
@@ -30,7 +38,6 @@ FILL | EXIT | ENTER | FLAT, m: text}`; `seq` only grows, so the page appends lin
 Classes: 0 = down, 1 = flat, 2 = up. Keep these keys working; ask before needing new ones (they come from the backend).
 
 Libraries are vendored in `web/vendor/` (ECharts 5.4.3, GSAP 3.12.5) so the page works offline.
-`fx.js` / `fx.css` hold the shared effects for the paper-trading and Results pages, all plain 2D canvas: the loading screen
-(arrow chart climbing bottom-left to top-right, camera pull-back, then an ember burn reveal; full intro once per browser session),
-the live depth chart with fading history, the animated cumulative P&L lines, the ticker band, word reveals, cursor ring and card
+`fx.js` / `fx.css` hold the shared effects for the paper-trading and Results pages: a short light loading screen (the logo's
+chart line draws itself, status lines, a sliding bar; it fades out on the first data, 0.9-4 s), the live depth chart with fading history, the animated cumulative P&L lines, the ticker band, word reveals, cursor ring and card
 spotlight. Reduced-motion users get the pages without the animation.

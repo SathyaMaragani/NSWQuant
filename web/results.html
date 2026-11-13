@@ -122,7 +122,7 @@
           (10 µs latency, −0.5 bp maker rebate). Settings were chosen on <b id="tuneDay">9 Nov</b> and never changed; every other day is out-of-sample.</p>
       </div>
       <div>
-        <div class="kl">Algorithm X · net P&amp;L over all test days</div>
+        <div class="kl">The Binance signal · profit it added over all test days</div>
         <div class="fx-big" id="heroBig">–</div>
         <div class="ks" id="heroSub" style="margin-top:8px"></div>
         <div class="ks" id="gen" style="margin-top:10px;color:var(--muted)"></div>
@@ -137,7 +137,7 @@
   <section class="kpis" aria-label="Headline results">
     <div class="kpi" id="k1"><div class="kl">Mean per day · algorithm X · <span id="kN">9</span> days</div><div class="kv" id="kTot">–</div><div class="ks" id="kTotSub">–</div></div>
     <div class="kpi"><div class="kl">Days profitable</div><div class="kv" id="kDays">–</div><div class="ks" id="kDaysSub">multi-day test</div></div>
-    <div class="kpi"><div class="kl">Value of the Binance signal</div><div class="kv" id="kSig">–</div><div class="ks" id="kSigSub">X vs the same quotes without it</div></div>
+    <div class="kpi"><div class="kl">Algorithm X · net, all test days</div><div class="kv" id="kSig">–</div><div class="ks" id="kSigSub">after fees &amp; the maker rebate</div></div>
     <div class="kpi"><div class="kl">Prediction accuracy</div><div class="kv" id="kAcc">–</div><div class="ks" id="kAccSub">–</div></div>
     <div class="kpi"><div class="kl">Decision time per tick</div><div class="kv" id="kLat">–</div><div class="ks" id="kLatSub">–</div></div>
     <div class="kpi"><div class="kl">Model size</div><div class="kv" id="kSize">–</div><div class="ks">integer-only int8 MLP 18→8→8→3</div></div>
@@ -242,10 +242,19 @@ function draw() {
   }
   const sum = (D.days_summary || []).filter(r => r.market === M);
   const sx = sum.find(r => r.strategy === "X"), sx0 = sum.find(r => r.strategy === "X0");
+  // headline: what the Binance signal adds = X minus the same quotes with the signal off (X0), day by day
+  const dX = (D.days || []).filter(r => r.market === M && r.strategy === "X"), d0 = (D.days || []).filter(r => r.market === M && r.strategy === "X0");
+  const diff = dX.map(r => r.net_pnl - (d0.find(z => z.day === r.day)?.net_pnl ?? NaN)).filter(Number.isFinite);
+  const sigTot = diff.reduce((a, b) => a + b, 0), sigMu = sigTot / diff.length;
+  const sigT = sigMu / (Math.sqrt(diff.reduce((a, b) => a + (b - sigMu) ** 2, 0) / (diff.length - 1)) / Math.sqrt(diff.length));
+  const sigWin = diff.filter(v => v > 0).length;
+  if (diff.length) {
+    FX.count($("heroBig"), sigTot, v => `<span class="${cls(sigTot)}">${usd(v)}</span><small>USDT</small>`);
+    $("heroSub").innerHTML = `vs the same quotes with the signal off · better on <b>${sigWin} of ${diff.length}</b> days · t = ${sigT.toFixed(2)}`;
+  }
   if (sx) {
-    FX.count($("heroBig"), sx.net_total, v => `<span class="${cls(sx.net_total)}">${usd(v)}</span><small>USDT</small>`);
-    $("heroSub").innerHTML = `<b>${sx.positive_days} of ${sx.days}</b> days profitable · the Binance signal beat the same quotes without it on ` +
-      `<b>${(() => { const a = (D.days || []).filter(r => r.market === M && r.strategy === "X"); return a.filter(r => r.net_pnl > ((D.days || []).find(z => z.market === M && z.strategy === "X0" && z.day === r.day)?.net_pnl ?? Infinity)).length; })()} of ${sx.days}</b> days`;
+    $("kSig").innerHTML = `${usd(sx.net_total)}<small>USDT</small>`; $("kSig").className = "kv " + cls(sx.net_total);
+    $("kSigSub").innerHTML = `<b>${sx.positive_days}/${sx.days}</b> days profitable · after fees &amp; the −0.5 bp maker rebate`;
   }
   if (sx) {
     $("kN").textContent = sx.days;
@@ -255,13 +264,6 @@ function draw() {
     $("kDays").innerHTML = `${sx.positive_days}<small>/ ${sx.days}</small>`;
     $("kDaysSub").innerHTML = `best ${usd(sx.best_day)} · worst ${usd(sx.worst_day)}`;
   } else { $("kDays").textContent = "running"; $("kTot").textContent = "–"; $("kTotSub").textContent = "multi-day test in progress"; }
-  const dX = (D.days || []).filter(r => r.market === M && r.strategy === "X"), d0 = (D.days || []).filter(r => r.market === M && r.strategy === "X0");
-  if (dX.length && d0.length) {
-    const diff = dX.map(r => r.net_pnl - (d0.find(z => z.day === r.day)?.net_pnl ?? NaN)).filter(Number.isFinite);
-    const tot = diff.reduce((a, b) => a + b, 0), mu = tot / diff.length, sd = Math.sqrt(diff.reduce((a, b) => a + (b - mu) ** 2, 0) / (diff.length - 1));
-    $("kSig").innerHTML = `${usd(tot)}<small>USDT</small>`; $("kSig").className = "kv " + cls(tot);
-    $("kSigSub").innerHTML = `better on <b>${diff.filter(v => v > 0).length}/${diff.length}</b> days · t = ${(mu / (sd / Math.sqrt(diff.length))).toFixed(2)} · vs same quotes, signal off`;
-  }
   const acc = (D.accuracy || []).find(r => r.market.includes(M));
   if (acc) {
     $("kAcc").textContent = pct(acc.model);
@@ -295,8 +297,8 @@ function draw() {
   if (dlist.length) BARS.set(dlist.map(dd), { X: cum("X"), X0: cum("X0"), Q: cum("Q") }, { X: C.X, X0: C.X0, Q: C.Q }, usd);
   $("barsRange").textContent = dlist.length ? `${dd(dlist[0])} – ${dd(dlist[dlist.length - 1])}` : "";
   const acc2 = (D.accuracy || []).find(r => r.market.includes(M)), lat2 = (D.latency || []).find(r => r.name.startsWith("C full tick"));
-  MQ.set([["MARKET", M], ["X · NET, " + (sx ? sx.days : "–") + " DAYS", sx ? usd(sx.net_total) + " USDT" : "–", sx ? cls(sx.net_total) : ""],
-    ["DAYS PROFITABLE", sx ? `${sx.positive_days}/${sx.days}` : "–"], ["SIGNAL VALUE", $("kSig").textContent.replace("USDT", " USDT"), "pos"],
+  MQ.set([["MARKET", M], ["BINANCE SIGNAL VALUE", diff.length ? usd(sigTot) + " USDT" : "–", cls(sigTot)],
+    ["SIGNAL BETTER ON", diff.length ? `${sigWin}/${diff.length} DAYS` : "–"], ["X · NET, " + (sx ? sx.days : "–") + " DAYS", sx ? usd(sx.net_total) + " USDT" : "–", sx ? cls(sx.net_total) : ""],
     ["TEST DAY 10 NOV", x ? usd(x.net_pnl) + " USDT" : "–", x ? cls(x.net_pnl) : ""], ["ACCURACY", acc2 ? pct(acc2.model) : "–"],
     ["TOP-10% CALLS", acc2 ? pct(acc2.top10) : "–"], ["DECISION", lat2 ? lat2.p50_us + " µs" : "–"], ["MODEL", "532 B int8"], ["P&L", "SIMULATED"]]);
   FX.ready();
