@@ -43,8 +43,8 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
   the "traps" in §8).
 - Has asked for: light, professional "quant/HFT firm" UI; Bookmap-style heatmap; a trading-platform view (order book,
   trade book, positions); a simple animated loader (replaced an elaborate canvas one).
-- Pending decisions the user has **not** answered yet: commit the latest work? connect a broker demo account (§11)?
-  continue the retail-strategy research (§11)?
+- Pending decisions the user has **not** answered yet: push? mirror the page changes to `frontend` (§4)? connect a
+  broker demo account (§11)? continue the retail-strategy research (§11)?
 
 ---
 
@@ -55,8 +55,11 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
   `github.com/SathyaMaragani/NSWQuant` (note the repo name spelling).
 - Branches: **`backend`** (current, main working branch; code + web pages) and **`frontend`** (web pages + sample JSON
   data contracts only: `web/*.html`, `web/fx.*`, `web/paper_state.json`, `web/paper_heat.json`, `web/state.json`,
-  `web/results_data.json`, vendored ECharts/GSAP). Last commits: backend `dc2cb70`, frontend `bb098f7`.
-- **Uncommitted changes (as of writing):**
+  `web/results_data.json`, vendored ECharts/GSAP). Last commits: backend `c946934` (plus the commit that updated this
+  section), frontend `bb098f7`.
+- **All work is committed on `backend`** in `c946934` ("Live algorithm X with a live Binance signal, trading desk,
+  retail-fee strategy research, handoff doc"); the working tree was clean after it. **Nothing is pushed**, and the
+  **`frontend` branch has not been updated** with these page changes yet. What that commit contains:
 
 | file | change | made by |
 |---|---|---|
@@ -66,11 +69,13 @@ imbalance): **+727.03 USDT over 9 out-of-sample days on ETH, 6/9 days positive, 
 | `strategies.py` | new `SignalSwing` (strategy D) | this agent |
 | `retail.py` (new), `results/retail/` (new) | retail-fee strategy research runner and round-1 results | this agent |
 | `README.md` | "Live paper trading" section; file table updated | this agent |
-| `web/results.html` | hero now shows "the Binance signal · profit it added" (X − X0) and the KPI shows X's net | **not this agent** (another session or the user) — don't revert it, ask if unsure |
+| `web/results.html` | hero now shows "the Binance signal · profit it added" (X − X0) and the KPI shows X's net | **not this agent** (another session or the user); committed as part of the working tree at the user's request — don't revert it, ask if unsure |
+| `HANDOFF.md` | this file | this agent |
 
-- If asked to commit: commit to `backend`; the user's earlier pattern was one descriptive commit per feature. Also
-  mirror page changes (`web/trading.html`, `web/fx.js`, `web/fx.css`, and sample data if the state schema changed)
-  to the `frontend` branch, as was done before. End commit messages without attribution lines.
+- Future commits: commit to `backend`; the user's earlier pattern was one descriptive commit per feature. Page changes
+  were previously mirrored to the `frontend` branch (`web/trading.html`, `web/fx.js`, `web/fx.css`, and sample data
+  if the state schema changed) — that mirror is outstanding for `c946934`; ask before doing it. Don't push unless asked.
+  End commit messages without attribution lines.
 
 ---
 
@@ -292,7 +297,7 @@ shell. Plan: hard-code the demo domain, selftest that fails if a mainnet trading
 is expected to lose there; it proves the pipeline, not profitability.** Zerodha has no paper API; Binance futures
 testnet has a separate thin book.
 
-**C. Commit** the work in §4 when the user says so.
+**C. Git follow-ups** (ask first): push `backend`; mirror the page changes of `c946934` to `frontend` (§4).
 
 ---
 
@@ -322,7 +327,7 @@ Other selftests exist in `tinyml.py`, `strategy.py`, `fetch_bybit.py`, `live_pre
 - `hftsim.FAR = 1e12`: a queue_ahead ≥ 1e11 means "behind the visible book".
 - Binance REST depth (`limit=1000`) spans only ~±0.6 % of ETH's price; the ±2–3 % bands need the diff stream.
 - Restarts reset the live session and X's warm-up (§5). Ask before restarting.
-- Don't touch `web/results.html`'s uncommitted edit without asking (§4).
+- Don't revert the `web/results.html` headline change (made outside this agent, now committed) without asking (§4).
 
 ---
 
