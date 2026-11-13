@@ -1,27 +1,24 @@
-/* NSEQuant shared effects: loader with burn reveal, scroll reveals, tilt, display type, dark chart stages. */
+/* NSEQuant shared effects: loader, scroll reveals, tilt, display type, dark chart stages. */
 :root { --display: "Instrument Serif", "Times New Roman", serif; }
 
-/* ---------- loader ---------- */
-#fx-loader { position: fixed; inset: 0; z-index: 1000; background: #05070d; overflow: hidden; }
-#fx-loader.burning { background: transparent; }
-#fx-loader canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-#fx-loader .fx-ui { position: absolute; inset: 0; pointer-events: none; color: #e6ebf5; font-family: "IBM Plex Sans", system-ui, sans-serif; transition: opacity .35s; }
-#fx-loader.burning .fx-ui { opacity: 0; }
-.fx-brand { position: absolute; left: 40px; top: 34px; display: flex; align-items: center; gap: 12px; font: 700 15px/1 "IBM Plex Sans", sans-serif; letter-spacing: .02em; }
-.fx-brand svg { width: 28px; height: 28px; }
-.fx-brand span { color: #7cb0ff; }
-.fx-title { position: absolute; left: 40px; top: 92px; font: 400 clamp(38px, 6vw, 88px)/0.95 var(--display); letter-spacing: -.01em; max-width: 11ch; }
-.fx-title i { color: #7cb0ff; }
-.fx-count { position: absolute; right: 40px; bottom: 40px; text-align: right; font: 400 clamp(64px, 11vw, 168px)/0.85 var(--display); font-variant-numeric: tabular-nums; }
-.fx-count small { font-size: .32em; color: #8f9bb3; margin-left: .08em; }
-.fx-status { position: absolute; right: 40px; bottom: clamp(120px, 15vw, 210px); text-align: right; font: 500 12px/1.9 "IBM Plex Mono", monospace; color: #8f9bb3; letter-spacing: .08em; text-transform: uppercase; }
-.fx-status b { color: #e6ebf5; font-weight: 600; }
-.fx-bar { position: absolute; left: 40px; right: 40px; bottom: 26px; height: 1px; background: rgba(230,235,245,.14); }
-.fx-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3b82f6, #7cb0ff, #fff); box-shadow: 0 0 12px #7cb0ff; }
-#fx-skip { position: absolute; right: 40px; top: 32px; pointer-events: auto; font: 600 11px/1 "IBM Plex Mono", monospace; letter-spacing: .24em; color: #8f9bb3; background: none;
-  border: 1px solid rgba(230,235,245,.2); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
-#fx-skip:hover, #fx-skip:focus-visible { color: #fff; border-color: rgba(230,235,245,.6); outline: none; }
-@media (max-width: 720px) { .fx-brand, .fx-title, .fx-bar { left: 20px; } .fx-status, #fx-skip, .fx-count { right: 20px; } .fx-bar { right: 20px; } .fx-title { top: 76px; } }
+/* ---------- loader: logo line draws itself, status, sliding bar; fades out on the first data ---------- */
+#fx-loader { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: #f2f4f7; transition: opacity .4s ease, visibility .4s; }
+#fx-loader.out { opacity: 0; visibility: hidden; }
+.fx-l { display: flex; flex-direction: column; align-items: center; gap: 14px; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+.fx-mark { width: 56px; height: 56px; overflow: visible; }
+.fx-mark rect { fill: #0d1626; transform-box: fill-box; transform-origin: center; animation: fxPop .5s cubic-bezier(.2,.8,.2,1) both; }
+.fx-mark path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: fxDraw 1.6s ease-in-out .2s infinite; }
+.fx-word { font: 700 20px/1 "IBM Plex Sans", system-ui, sans-serif; color: #0d1626; letter-spacing: .01em; animation: fxIn .5s ease both .15s; }
+.fx-word span { color: #1f4fd6; }
+.fx-msg { font: 500 12px/1 "IBM Plex Mono", ui-monospace, monospace; color: #8590a2; letter-spacing: .04em; min-height: 12px; }
+.fx-msg.in { animation: fxIn .35s ease both; }
+.fx-track { width: 160px; height: 3px; border-radius: 3px; background: #e3e7ed; overflow: hidden; }
+.fx-track i { display: block; width: 40%; height: 100%; border-radius: 3px; background: #1f4fd6; animation: fxSlide 1.1s ease-in-out infinite; }
+@keyframes fxDraw { 0% { stroke-dashoffset: 1; } 55%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+@keyframes fxPop { from { opacity: 0; transform: scale(.75); } to { opacity: 1; transform: none; } }
+@keyframes fxIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes fxSlide { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
 
 /* ---------- reveals and tilt ---------- */
 .fx-rise { opacity: 0; transform: perspective(1200px) translateY(28px) rotateX(6deg); transform-origin: 50% 100%;
@@ -57,44 +54,4 @@
 .fx-stats .l { font: 600 10.5px/1.3 "IBM Plex Sans", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--muted, #8590a2); }
 .fx-stats .v { font: 400 34px/1.05 var(--display); color: var(--ink, #0d1626); margin-top: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fx-stats .v small { font: 500 12px "IBM Plex Sans", sans-serif; color: var(--ink2, #475467); margin-left: 4px; }
-#fx-loader.burning #fx-skip { opacity: 0; pointer-events: none; transition: opacity .25s; }
 @media (max-width: 720px) { .fx-stats .v { font-size: 24px; } .fx-stats .v small { display: block; margin: 2px 0 0; } }
-
-/* ---------- loader polish: title reveal and film grain ---------- */
-.fx-title { animation: fxTitle 1.1s cubic-bezier(.2,.8,.2,1) both .15s; }
-.fx-title i { display: inline-block; animation: fxTitle 1.1s cubic-bezier(.2,.8,.2,1) both .45s; }
-@keyframes fxTitle { from { opacity: 0; transform: translateY(32px); filter: blur(10px); } to { opacity: 1; transform: none; filter: none; } }
-#fx-loader::after { content: ""; position: absolute; inset: -50%; pointer-events: none; opacity: .08; mix-blend-mode: overlay; animation: fxGrain 1s steps(5) infinite;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
-#fx-loader.burning::after { opacity: 0; transition: opacity .3s; }
-@keyframes fxGrain { 0% { transform: translate(0,0); } 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } 100% { transform: translate(3%, 3%); } }
-
-/* ---------- ticker band ---------- */
-.fx-marquee { overflow: hidden; background: #0b1020; color: #c9d3e6; border-bottom: 1px solid #1b2440; position: relative; }
-.fx-marquee::before, .fx-marquee::after { content: ""; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 1; pointer-events: none; }
-.fx-marquee::before { left: 0; background: linear-gradient(90deg, #0b1020, transparent); } .fx-marquee::after { right: 0; background: linear-gradient(270deg, #0b1020, transparent); }
-.fx-mq-track { display: flex; width: max-content; animation: fxMq 46s linear infinite; }
-.fx-marquee:hover .fx-mq-track { animation-play-state: paused; }
-.fx-mq-run { display: flex; align-items: center; white-space: nowrap; padding: 9px 0; }
-.fx-mq-item { display: inline-flex; align-items: baseline; gap: 8px; padding: 0 18px; font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .04em; }
-.fx-mq-item b { color: #6b7a99; font-weight: 600; letter-spacing: .12em; font-size: 10.5px; }
-.fx-mq-item em { font-style: normal; color: #e6ebf5; font-weight: 600; } .fx-mq-item em.pos { color: #34d399; } .fx-mq-item em.neg { color: #f87171; }
-.fx-mq-sep { color: #3b4a6b; font-size: 10px; }
-@keyframes fxMq { to { transform: translateX(-50%); } }
-
-/* ---------- headline words ---------- */
-.fx-words .fx-w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: .08em; margin-bottom: -.08em; }
-.fx-words .fx-w > span { display: inline-block; transform: translateY(110%) rotate(4deg); transition: transform 1s cubic-bezier(.2,.8,.2,1); transition-delay: calc(var(--i) * 70ms + 120ms); }
-.fx-words.in .fx-w > span { transform: none; }
-
-/* ---------- cursor ring and card spotlight ---------- */
-.fx-cursor { position: fixed; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(31,79,214,.55); pointer-events: none; z-index: 2000;
-  transition: width .25s, height .25s, left .25s, top .25s, background .25s, border-color .25s, opacity .25s; mix-blend-mode: multiply; }
-.fx-cursor.big { width: 64px; height: 64px; left: -32px; top: -32px; background: rgba(31,79,214,.10); border-color: rgba(31,79,214,.8); }
-.fx-cursor.down { width: 26px; height: 26px; left: -13px; top: -13px; }
-.fx-cursor.gone { opacity: 0; }
-.fx-spot { position: relative; isolation: isolate; }
-.fx-spot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s; z-index: 2;
-  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(31,79,214,.08), transparent 45%); }
-.fx-spot:hover::after { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .fx-mq-track { animation: none; } .fx-words .fx-w > span { transform: none; transition: none; } .fx-title, .fx-title i { animation: none; } }

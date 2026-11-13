@@ -126,6 +126,20 @@ significant at 95 %, BTC has no edge, and Q's +11.54 test-day result did not hol
 Per-day results: `results/hftsim/multiday.csv`; the Results page (`web/results.html`, served by `paper_trade.py`
 at `/results.html`) shows all of it, built by `make_results.py`.
 
+### Live paper trading
+`paper_trade.py` runs X live next to A, C and T. X uses the same `hftsim.Exchange`, the same `ImbalanceMM` class and the
+same frozen 9-Nov settings as the 9-day test (HFT-firm profile, −0.5 bp maker rebate). Its signal is rebuilt live:
+Binance's USD-M book from a REST snapshot plus the diff stream, then every 30 s the ±2 % / ±3 % band imbalance,
+z-scored over the last hour. That matches what the backtest read from the bookDepth archive.
+Two live-only differences:
+- X waits 15 min while the rebuilt book's far levels fill in, then needs 4 snapshots before it quotes.
+- X sits out with no quotes whenever the signal is unavailable; the backtest quoted as if the signal were 0.
+
+The page shows X's net at the rebate tier and, next to it, the same trades at retail VIP0 fees. Over the 9 days, X
+was profitable only with the rebate, and 3 of 9 days lost money, so a single live session can be negative.
+The top of the page is a trading desk: market depth with our working orders, positions, order book (every order and
+its status), trade book (every execution) and time & sales.
+
 Fix in this version: trade prints that share a millisecond are one sweep, so a cancel can no longer take effect
 between them (the earlier simulator let the queue-depletion guard dodge part of a sweep). A and C were re-run.
 
@@ -139,7 +153,7 @@ between them (the earlier simulator let the queue-depletion guard dodge part of 
 | `tinyml_midprice.ipynb` | full prediction pipeline and results |
 | `experiments.py` | teacher vs student, QAT, Pareto, importance, decision value |
 | `strategy.py` | NSQ-MM market maker, signal taker, event-driven backtester |
-| `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed + dashboard |
+| `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed (A, C, T, and X with a live Binance signal) + trading-desk dashboard |
 | `hftsim.py`, `strategies.py` | HFT simulation environment with infrastructure profiles; strategy library (A, C, Q, O, X, T) |
 | `multiday.py`, `make_results.py` | frozen-settings test across 9 days; builds `web/results_data.json` for the Results page |
 | `live_predict.py` | live / replay NIFTY inference + dashboard server |

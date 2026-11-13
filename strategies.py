@@ -165,6 +165,81 @@ class ImbalanceMM(QuotingMM):
         super().on_book(env)
 
 
+class SignalSwing(Strategy):
+    """D: a slow directional strategy for a retail account (no rebate, back of the queue, 50 ms).
+    When the Binance +-2.5 % depth-imbalance z is beyond +-k_in, buy (z > 0) or sell with a post-only order resting at
+    the best price, re-pegged to the touch once a second; give up after entry_s. Hold for hold_s, or exit early if the
+    signal turns the other way (z * side < -k_out). Exit with a post-only order at the opposite touch; after exit_s
+    without a full fill, close the rest at market. One position at a time; cooldown_s before the next entry."""
+
+    def __init__(self, size, k_in=1.5, hold_s=1800, entry_s=120, exit_s=60, k_out=1.0, cooldown_s=60, zcol=2, peg_ms=1000,
+                 extend=False):
+        self.size, self.k_in, self.hold, self.entry, self.exit_t = size, k_in, hold_s * 1000, entry_s * 1000, exit_s * 1000
+        self.extend = extend                       # at the end of the hold, stay in (another hold) while |z| >= k_in our way
+        self.k_out, self.cool, self.zcol, self.peg = k_out, cooldown_s * 1000, int(zcol), peg_ms
+        self.state, self.side, self.oid, self.t0, self.next_peg, self.free_at = "flat", 0, None, 0, 0, 0
+        self.trips = self.market_exits = 0
+
+    def _z(self, env):
+        z = env.aux[self.zcol] if env.aux is not None else math.nan
+        return z if math.isfinite(z) else math.nan
+
+    def _peg(self, env, side, qty):
+        """Keep one post-only order at our side's best price."""
+        px = env.bp[0] if side > 0 else env.ap[0]
+        o = env.orders.get(self.oid) if self.oid is not None else None
+        if o is None:
+            self.oid = env.place(side, px, qty)
+        elif o.px != px and o.live:
+            new = env.replace(self.oid, px)
+            if new:
+                self.oid = new
+
+    def _cancel(self, env):
+        if self.oid is not None and self.oid in env.orders:
+            env.cancel(self.oid)
+        self.oid = None
+
+    def on_book(self, env):
+        now, z = env.now, self._z(env)
+        if self.state == "flat":
+            if now >= self.free_at and abs(z) >= self.k_in:
+                self.side, self.state, self.t0, self.next_peg = (1 if z > 0 else -1), "entering", now, now
+        if self.state == "entering":
+            if abs(env.pos) > 1e-12:                   # (partly) filled: hold what we got
+                self._cancel(env)
+                self.state, self.t0 = "holding", now
+            elif now - self.t0 > self.entry or not (z * self.side >= self.k_in):
+                self._cancel(env)                      # signal gone or waited too long
+                self.state = "flat"
+                return
+            elif now >= self.next_peg:
+                self.next_peg = now + self.peg
+                self._peg(env, self.side, self.size)
+        if self.state == "holding":
+            if z * self.side < -self.k_out:
+                self.state, self.t0, self.next_peg = "exiting", now, now
+            elif now - self.t0 >= self.hold:
+                if self.extend and z * self.side >= self.k_in:
+                    self.t0 = now                  # still a strong call our way: holding beats paying to exit and re-enter
+                else:
+                    self.state, self.t0, self.next_peg = "exiting", now, now
+        if self.state == "exiting":
+            if abs(env.pos) < 1e-12:
+                self._cancel(env)
+                self.state, self.free_at = "flat", now + self.cool
+                self.trips += 1
+            elif now - self.t0 > self.exit_t:
+                self._cancel(env)
+                env.market(-1 if env.pos > 0 else 1, abs(env.pos))
+                self.market_exits += self.next_peg < 10 ** 18
+                self.t0 = now - self.exit_t + 1000      # if anything is still open in 1 s, take it again
+                self.next_peg = 10 ** 18                # no more passive exit orders
+            elif now >= self.next_peg:
+                self.next_peg = now + self.peg
+                self._peg(env, -1 if env.pos > 0 else 1, abs(env.pos))
+
+
 class SignalTaker(Strategy):
     """Cross the spread on the model's confident calls, hold `hold` book updates, cross back."""
 

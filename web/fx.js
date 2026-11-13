@@ -1,7 +1,7 @@
 /* NSEQuant shared effects, all 2D canvas (no libraries).
-   FX.loader({title, status})  a glowing arrow chart climbs bottom-left to top-right, then the screen burns away from
-                               the centre to reveal the page. Full intro once per browser session; later loads only burn.
-   FX.ready()                  tell the loader the page has its first data (it waits for this, at most 4.5 s).
+   FX.loader({status})         a short light loader (logo line drawing itself, status, sliding bar) that fades out
+                               once the page has its first data.
+   FX.ready()                  tell the loader the page has its first data (it waits for this, 0.9 s to 4 s).
    FX.onReveal(fn)             run fn when the page is revealed (or at once if there is no loader).
    FX.rise(selector)           sections rise in as they scroll into view.     FX.tilt(selector)   tilt on hover.
    FX.count(el, to, fmt)       count-up.
@@ -23,165 +23,36 @@
   }
 
   // ------------------------------------------------------------------------------------------------ loader
+  // A short light loader: the logo's chart line draws itself, a status line and a sliding bar. It fades out once
+  // the page has its first data (at least 0.9 s so it never flashes, at most 4 s so it never blocks).
   FX.loader = function (opt = {}) {
-    let seen = false;
-    try { seen = sessionStorage.getItem("nsq_intro") === "1"; } catch (e) {}
     if (REDUCE || document.hidden) { doReveal(); return; }
-    const short = seen;
-    try { sessionStorage.setItem("nsq_intro", "1"); } catch (e) {}
-
+    const msgs = opt.status && opt.status.length ? opt.status : ["Connecting to the live feed"];
     const root = document.createElement("div");
     root.id = "fx-loader";
-    root.setAttribute("aria-label", "Loading");
-    root.innerHTML = `<canvas></canvas><div class="fx-ui" ${short ? 'style="display:none"' : ""}>
-      <div class="fx-brand"><svg viewBox="0 0 26 26"><rect width="26" height="26" rx="5" fill="#e6ebf5"/><path d="M6 18 L10.5 8.5 L15 15 L20 7" fill="none" stroke="#05070d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE<span>Quant</span></div>
-      <div class="fx-title">${opt.title || "Microseconds, <i>compounded.</i>"}</div>
-      <div class="fx-status" id="fx-status"></div>
-      <div class="fx-count"><span id="fx-pct">0</span><small>%</small></div>
-      <div class="fx-bar"><i id="fx-barfill"></i></div></div>
-      <button id="fx-skip" type="button" ${short ? 'style="display:none"' : ""}>SKIP</button>`;
+    root.setAttribute("role", "status");
+    root.innerHTML = `<div class="fx-l">
+      <svg class="fx-mark" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="6"/><path pathLength="1" d="M6 18 L10.5 8.5 L15 15 L20 7"/></svg>
+      <div class="fx-word">NSE<span>Quant</span></div>
+      <div class="fx-msg in">${msgs[0]}</div>
+      <div class="fx-track"><i></i></div></div>`;
     document.body.appendChild(root);
-    document.documentElement.style.overflow = "hidden";
-    const STEPS = opt.status || ["Connecting to the live feed", "Loading the 532-byte int8 model", "Warming the hot path", "Rebuilding the order book", "Ready"];
-    const cv = root.querySelector("canvas"), ctx = cv.getContext("2d");
-
-    // deterministic price path, volume bars and sparks
-    const N = 160, path = [];
-    for (let i = 0; i <= N; i++) {
-      const u = i / N;
-      path.push(Math.max(0, Math.min(1, 0.04 + 0.92 * Math.pow(u, 1.25) + 0.055 * Math.sin(u * 23) * (1 - u * 0.4)
-        + 0.03 * Math.sin(u * 57 + 1.3) - 0.07 * Math.exp(-((u - 0.55) ** 2) / 0.004))));
-    }
-    const NB = 46, bars = Array.from({ length: NB }, (_, i) => ({ u: (i + 0.5) / NB,
-      h: 0.25 + 0.75 * Math.abs(Math.sin(i * 1.7) * 0.6 + Math.sin(i * 0.37) * 0.5), up: Math.sin(i * 2.3) > -0.35 }));
-    const sparks = Array.from({ length: 140 }, () => ({ x: Math.random(), y: Math.random(), v: 0.0006 + Math.random() * 0.0016, r: 0.6 + Math.random() * 1.4 }));
-    const NC = 64, candles = Array.from({ length: NC }, (_, i) => ({ u: (i + 0.5) / NC, up: Math.sin(i * 2.9 + 0.4) > -0.25,
-      b: 0.012 + 0.03 * Math.abs(Math.sin(i * 1.3)), w: 0.006 + 0.016 * Math.abs(Math.cos(i * 0.9)) }));
-    const embers = [];
-    const phase = [Math.random() * 6.28, Math.random() * 6.28, Math.random() * 6.28];
-
-    const t0 = performance.now(), MIN = short ? 0 : 3000;
-    setTimeout(() => { readyFlag = true; }, short ? 0 : 4500);
-    let prog = short ? 1 : 0, burnT = null, done = false, lastStep = -1;
-    const pct = root.querySelector("#fx-pct"), barEl = root.querySelector("#fx-barfill"), status = root.querySelector("#fx-status");
-    const skip = () => { prog = 1; readyFlag = true; if (burnT == null) startBurn(); };
-    root.querySelector("#fx-skip").onclick = skip;
-    addEventListener("keydown", function k(e) { if (e.key === "Escape") { skip(); removeEventListener("keydown", k); } });
-    function startBurn() { burnT = performance.now(); root.classList.add("burning"); document.documentElement.style.overflow = ""; doReveal(); }
-
-    function scene(W, H, p, t) {
-      ctx.setTransform(Math.min(2, devicePixelRatio || 1), 0, 0, Math.min(2, devicePixelRatio || 1), 0, 0);
-      ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "#05070d"; ctx.fillRect(0, 0, W, H);
-      const glow = ctx.createRadialGradient(W * 0.72, H * 0.25, 0, W * 0.72, H * 0.25, Math.max(W, H) * 0.7);
-      glow.addColorStop(0, "rgba(37,72,160,0.32)"); glow.addColorStop(1, "rgba(5,7,13,0)");
-      ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-
-      const x0 = W * 0.05, x1 = W * 0.93, yb = H * 0.8, yt = H * 0.2, X = u => x0 + (x1 - x0) * u, Y = v => yb - (yb - yt) * v;
-      const n = Math.max(2, Math.floor(p * N)), frac = p * N - Math.floor(p * N);
-      const pts = path.slice(0, n + 1).map((v, i) => [X(i / N), Y(v)]);
-      if (n < N) { const a = path[n], b = path[n + 1]; pts[n] = [X((n + frac) / N), Y(a + (b - a) * frac)]; }
-      // camera: starts close on the tip at bottom-left, pulls back to the whole climb
-      const [tx0, ty0] = pts[pts.length - 1], k = Math.pow(1 - p, 1.6), z = 1 + 1.15 * k;
-      const fx = tx0 + (W / 2 - tx0) * (1 - k), fy = ty0 + (H / 2 - ty0) * (1 - k);
-      const cam = (par) => { const zz = 1 + (z - 1) * par; ctx.translate(W / 2, H / 2); ctx.scale(zz, zz); ctx.translate(-(W / 2 + (fx - W / 2) * par), -(H / 2 + (fy - H / 2) * par)); };
-      ctx.save(); cam(0.35);                                                  // far layer: grid and sparks move less (parallax)
-      ctx.strokeStyle = "rgba(124,176,255,0.06)"; ctx.lineWidth = 1;
-      const g = Math.max(48, Math.round(W / 26));
-      for (let x = -W + (t * 6) % g; x < 2 * W; x += g) { ctx.beginPath(); ctx.moveTo(x, -H); ctx.lineTo(x, 2 * H); ctx.stroke(); }
-      for (let y = -H; y < 2 * H; y += g) { ctx.beginPath(); ctx.moveTo(-W, y); ctx.lineTo(2 * W, y); ctx.stroke(); }
-      sparks.forEach(s => { s.y -= s.v; if (s.y < 0) { s.y = 1; s.x = Math.random(); }
-        ctx.fillStyle = `rgba(159,199,255,${0.25 + 0.5 * (1 - s.y)})`; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, 6.283); ctx.fill(); });
-      ctx.restore();
-      ctx.save(); cam(1);
-      candles.forEach(c => {                                                  // candlesticks form along the line as it passes
-        const kk = Math.max(0, Math.min(1, (p - c.u) * 9)); if (!kk) return;
-        const v = path[Math.round(c.u * N)], cx = X(c.u), up = c.up, body = c.b * (yb - yt) * kk, wick = c.w * (yb - yt) * kk;
-        const yo = Y(v) + (up ? body / 2 : -body / 2), yc = Y(v) + (up ? -body / 2 : body / 2), bw = (x1 - x0) / NC * 0.5;
-        ctx.globalAlpha = 0.75 * kk; ctx.strokeStyle = ctx.fillStyle = up ? "#22d39a" : "#ff5a6a"; ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(cx, Math.min(yo, yc) - wick); ctx.lineTo(cx, Math.max(yo, yc) + wick); ctx.stroke();
-        ctx.fillRect(cx - bw / 2, Math.min(yo, yc), bw, Math.max(1.5, Math.abs(yc - yo)));
-        ctx.globalAlpha = 1;
-      });
-      bars.forEach(b => {                                                     // volume bars rise as the line passes
-        const k = Math.max(0, Math.min(1, (p - b.u * 0.95) * 6)); if (!k) return;
-        const bw = (x1 - x0) / NB * 0.58, bh = (H * 0.2) * b.h * k, bx = X(b.u) - bw / 2;
-        const gr = ctx.createLinearGradient(0, yb - bh, 0, yb);
-        gr.addColorStop(0, b.up ? "rgba(59,130,246,0.95)" : "rgba(234,57,67,0.85)"); gr.addColorStop(1, b.up ? "rgba(59,130,246,0.15)" : "rgba(234,57,67,0.12)");
-        ctx.fillStyle = gr; ctx.fillRect(bx, yb - bh, bw, bh);
-      });
-      ctx.strokeStyle = "rgba(124,176,255,0.25)"; ctx.beginPath(); ctx.moveTo(x0, yb + 0.5); ctx.lineTo(x1, yb + 0.5); ctx.stroke();
-
-      const area = ctx.createLinearGradient(0, yt, 0, yb);
-      area.addColorStop(0, "rgba(59,130,246,0.42)"); area.addColorStop(1, "rgba(59,130,246,0)");
-      ctx.beginPath(); ctx.moveTo(pts[0][0], yb); pts.forEach(q => ctx.lineTo(q[0], q[1])); ctx.lineTo(pts[pts.length - 1][0], yb); ctx.closePath();
-      ctx.fillStyle = area; ctx.fill();
-      const stroke = (w, c, blur) => { ctx.save(); ctx.lineJoin = ctx.lineCap = "round"; ctx.lineWidth = w; ctx.strokeStyle = c; ctx.shadowColor = "#3b82f6"; ctx.shadowBlur = blur;
-        ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke(); ctx.restore(); };
-      stroke(10, "rgba(59,130,246,0.25)", 30); stroke(3.2, "#cfe3ff", 18);
-      const [tx, ty] = pts[pts.length - 1], [px, py] = pts[Math.max(0, pts.length - 4)], ang = Math.atan2(ty - py, tx - px);
-      ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); ctx.fillStyle = "#ffffff"; ctx.shadowColor = "#7cb0ff"; ctx.shadowBlur = 24;   // arrowhead
-      const s = Math.max(14, W / 80); ctx.beginPath(); ctx.moveTo(s * 1.25, 0); ctx.lineTo(-s * 0.55, -s * 0.75); ctx.lineTo(-s * 0.2, 0); ctx.lineTo(-s * 0.55, s * 0.75); ctx.closePath(); ctx.fill(); ctx.restore();
-      const price = 1896.4 + 92.3 * path[Math.min(N, Math.round(p * N))], chg = (price / 1896.4 - 1) * 100;   // price tag riding the tip
-      const lbl = `${price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}  ▲ ${chg.toFixed(2)}%`;
-      ctx.font = `600 ${Math.max(11, Math.round(13 / z))}px 'IBM Plex Mono', monospace`; const lw = ctx.measureText(lbl).width + 16, lh = 22 / Math.sqrt(z);
-      ctx.fillStyle = "rgba(230,235,245,0.95)"; ctx.fillRect(tx + 14, ty - lh - 10, lw, lh); ctx.fillStyle = "#05070d"; ctx.fillText(lbl, tx + 22, ty - 10 - lh * 0.32);
-      ctx.restore();
-      const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);   // vignette
-      vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.55)"); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-    }
-
-    function blob(cx, cy, R, t) {           // a noisy circle: the burning edge
-      ctx.beginPath();
-      for (let i = 0; i <= 200; i++) {
-        const a = i / 200 * 6.2832, r = R * (1 + 0.13 * Math.sin(5 * a + phase[0] + t * 1.4) + 0.07 * Math.sin(11 * a + phase[1] - t * 2.1) + 0.035 * Math.sin(23 * a + phase[2] + t * 3));
-        i ? ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)) : ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
-      }
-      ctx.closePath();
-    }
-
-    function frame(now) {
-      if (done) return;
-      const [W, H] = fitCanvas(cv, ctx), t = (now - t0) / 1000;
-      if (burnT == null) {
-        const target = Math.min(1, (now - t0) / Math.max(1, MIN)) * (readyFlag ? 1 : 0.92);
-        prog += (target - prog) * (short ? 1 : 0.08);
-        if (prog > 0.995 && readyFlag && now - t0 > MIN) { prog = 1; startBurn(); }
-      }
-      const p = Math.min(1, prog);
-      scene(W, H, p, t);
-      if (pct) pct.textContent = Math.round(p * 100);
-      if (barEl) barEl.style.width = (p * 100).toFixed(1) + "%";
-      const st = Math.min(STEPS.length - 1, Math.floor(p * STEPS.length));
-      if (status && st !== lastStep) { lastStep = st; status.innerHTML = STEPS.map((x, i) => i < st ? `${x} ✓` : i === st ? `<b>${x}</b>` : "").filter(Boolean).slice(-3).join("<br>"); }
-      if (burnT != null) {
-        const b = Math.min(1, (now - burnT) / (short ? 750 : 1300)), e = b * b * (3 - 2 * b);
-        const R = Math.hypot(W, H) * 0.62 * e, cx = W / 2, cy = H / 2;
-        if (b >= 1) { done = true; root.remove(); return; }
-        ctx.save(); blob(cx, cy, R + 38, t); ctx.lineWidth = 70; ctx.strokeStyle = "rgba(25,10,2,0.55)"; ctx.stroke(); ctx.restore();   // char
-        ctx.save(); ctx.globalCompositeOperation = "destination-out"; blob(cx, cy, R, t); ctx.fill(); ctx.restore();                      // hole
-        ctx.save(); ctx.lineJoin = "round";                                                                                              // burning edge
-        [[22, "rgba(255,72,10,0.35)", 40], [9, "rgba(255,120,20,0.9)", 26], [3.5, "rgba(255,226,150,1)", 12]].forEach(([w, c, bl]) => {
-          blob(cx, cy, R + 2, t); ctx.lineWidth = w; ctx.strokeStyle = c; ctx.shadowColor = "#ff6a00"; ctx.shadowBlur = bl; ctx.stroke(); });
-        ctx.restore();
-        for (let i = 0; i < 26 && R > 4; i++) {                                     // embers thrown off the edge
-          const a = Math.random() * 6.2832, sp = 1.2 + Math.random() * 3.2;
-          embers.push({ x: cx + (R + 4) * Math.cos(a), y: cy + (R + 4) * Math.sin(a), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.2, life: 1, r: 0.8 + Math.random() * 2.2 });
-        }
-        ctx.save(); ctx.globalCompositeOperation = "lighter";
-        for (let i = embers.length - 1; i >= 0; i--) {
-          const m = embers[i]; m.x += m.vx; m.y += m.vy; m.vy -= 0.04; m.vx *= 0.985; m.life -= 0.02 + Math.random() * 0.012;
-          if (m.life <= 0) { embers.splice(i, 1); continue; }
-          ctx.fillStyle = `rgba(255,${Math.round(120 + 120 * m.life)},${Math.round(40 * m.life)},${m.life})`;
-          ctx.shadowColor = "#ff7a1a"; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(m.x, m.y, m.r * (0.5 + m.life), 0, 6.283); ctx.fill();
-        }
-        if (b < 0.18) { const fl = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.5);   // ignition flash
-          fl.addColorStop(0, `rgba(255,220,170,${0.55 * (1 - b / 0.18)})`); fl.addColorStop(1, "rgba(255,120,30,0)"); ctx.fillStyle = fl; ctx.fillRect(0, 0, W, H); }
-        ctx.restore();
-      }
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
+    const msg = root.querySelector(".fx-msg"), t0 = performance.now();
+    let i = 0;
+    const cycle = setInterval(() => {
+      if (i >= msgs.length - 1) return;
+      msg.textContent = msgs[++i];
+      msg.classList.remove("in"); void msg.offsetWidth; msg.classList.add("in");
+    }, 650);
+    (function wait() {
+      const dt = performance.now() - t0;
+      if ((readyFlag && dt > 900) || dt > 4000) {
+        clearInterval(cycle);
+        root.classList.add("out");
+        doReveal();
+        setTimeout(() => root.remove(), 450);
+      } else setTimeout(wait, 100);                // a timer, not rAF: still fires in a background tab
+    })();
   };
 
   // ------------------------------------------------------------------------------------------------ page effects
