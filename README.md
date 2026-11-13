@@ -30,3 +30,6 @@ FILL | EXIT | ENTER | FLAT, m: text}`; `seq` only grows, so the page appends lin
 Classes: 0 = down, 1 = flat, 2 = up. Keep these keys working; ask before needing new ones (they come from the backend).
 
 Libraries are vendored in `web/vendor/` (ECharts 5.4.3, GSAP 3.12.5) so the page works offline.
+`fx.js` / `fx.css` hold the shared effects for the paper-trading and Results pages: the 3D loading screen with the burn reveal
+(full intro once per browser session), the 3D liquidity terrain, the 3D daily-P&L bars, scroll reveals and card tilt.
+3D uses three.js r128 from cdnjs; without it (or without WebGL, or with reduced motion) the pages work without the effects.
