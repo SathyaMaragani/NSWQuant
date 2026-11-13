@@ -45,18 +45,42 @@ Infrastructure is a switch:
 `hft_firm` values are assumptions standing in for co-location and a market-maker fee tier, not measurements.
 Write a strategy by subclassing `hftsim.Strategy` (`on_book`, `on_trade`, `on_fill`) and using
 `env.place / replace / cancel / market`. Each strategy is tuned per profile on 9 Nov and tested once on 10 Nov.
+The tuning grids are fixed in `hftsim.run_market`.
 
 Net P&L after fees on the test day (USDT):
 
 | | ETH retail | ETH HFT firm | ETH frictionless | BTC retail | BTC HFT firm | BTC frictionless |
 |---|---|---|---|---|---|---|
 | A market maker, no model | −3,586.74 | −652.25 | −1,361.52 | −5,413.84 | −343.00 | −619.95 |
-| C NSQ-MM | −2,096.43 | −232.31 | −411.45 | −3,359.08 | −143.96 | −293.14 |
+| C NSQ-MM | −2,096.43 | −232.10 | −411.45 | −3,359.08 | −146.12 | −293.14 |
+| **Q NSQ-MM-Q (queue-aware)** | −107.71 | **+11.54** | +65.73 | −24.38 | **−0.48** | −8.88 |
 | T signal taker | −27.00 | −10.26 | +15.49 | −29.70 | −37.08 | +71.29 |
 
-Infrastructure cuts NSQ-MM's net loss by about 90% (retail → HFT firm). The model cuts the loss by 42–65%
-under every profile. With zero frictions the signal taker is profitable; the market makers still lose to adverse
-selection, which is the problem left for strategy work. Full output: `results/hftsim/`.
+Infrastructure cuts NSQ-MM's net loss by about 90% (retail → HFT firm). The model cuts the loss by 42–65% under every
+profile. Full output: `results/hftsim/`.
+
+### NSQ-MM-Q: the market maker that is profitable under `hft_firm` (ETH)
+Designed from a per-fill diagnosis on day-1 data only (7k fills, each with what was known before it):
+- fills from the back of a queue only happen when a sweep runs through the level: −20 ticks per ETH fill at 10 s;
+- among front-of-queue fills, the quarter the model rated least likely to be run over earned +22 ticks
+  (rebate included); the quarter it rated most likely lost −13 (ETH) / −47 (BTC).
+
+So, per side: rest only near the front of the queue (cancel if more than half a lot is ahead), quote only if the
+model's probability of a move against that side is ≤ τ, and at the touch only if our side holds enough of the depth.
+Re-quote on every trade. One grid (48 settings), the same for both markets, tuned on day 1 and tested once on day 2.
+
+What it shows, honestly:
+- **ETH: +11.54 net on the test day** (4,449 fills); BTC −0.48, i.e. break-even, not profitable.
+- The profit is the maker rebate: gross is −30.43 (ETH), and with no rebate the net is −30.43.
+  What the model buys is selection: adverse markout drops from about −20 to −17.5 ticks per fill, and fills drop
+  from 75k to 4k, so the rebate (10.7 ticks per ETH fill) now covers the remaining adverse selection.
+- It does not depend on the optimistic queue rule: with a 10 ms race window +4.45, at the back of every queue
+  +7.50, with 1 ms latency +9.58 (ETH).
+- It is thin: the test-day max drawdown (−52.74) is larger than the profit. One test day is not evidence of a
+  durable edge; it needs more days before anyone relies on it.
+
+Fix in this version: trade prints that share a millisecond are one sweep, so a cancel can no longer take effect
+between them (the earlier simulator let the queue-depletion guard dodge part of a sweep). A and C were re-run.
 
 ## Main files
 | file | what |

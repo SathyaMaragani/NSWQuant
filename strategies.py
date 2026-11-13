@@ -11,7 +11,9 @@ on_fill(env, fill).
 """
 import math
 
-from hftsim import Strategy
+from hftsim import FAR, Strategy
+
+FAR_AHEAD = 1e18
 
 
 class QuotingMM(Strategy):
@@ -83,6 +85,54 @@ class NSQMM(QuotingMM):
 
     def __init__(self, size, half=0.5, inv_skew=0.4, kappa=1.0, guard=False, **kw):
         super().__init__(size, half=half, inv_skew=inv_skew, kappa=kappa, use_signal=True, pull=True, guard=guard, **kw)
+
+
+class QueueAwareMM(NSQMM):
+    """NSQ-MM-Q: NSQ-MM that only takes fills it expects to win. From the per-fill diagnosis (day-1 data):
+    fills from the back of a queue only happen when a sweep runs through the level, and fills the model saw
+    coming lose. So, per side:
+      - rest only near the front of the queue: an order with more than max_ahead lots ahead is cancelled and
+        that price is skipped until the target moves;
+      - quote only if the model's probability of a move against that side is <= tau;
+      - at the touch, quote only if our side holds at least imb_min of the touch depth (a thin side gets run over)."""
+
+    def __init__(self, size, tau=1.0, imb_min=0.0, max_ahead=FAR_AHEAD, **kw):
+        super().__init__(size, **kw)
+        self.tau, self.imb_min, self.max_ahead = tau, imb_min, max_ahead
+        self.blocked = {+1: None, -1: None}        # side -> price we left because the queue was too long
+
+    def targets(self, env):
+        t = super().targets(env)
+        prob = env.signal[3]
+        for side in (+1, -1):
+            px = t[side]
+            if px is None:
+                continue
+            if px != self.blocked[side]:
+                self.blocked[side] = None
+            p_adv = prob[0] if side > 0 else prob[2]
+            own, opp = (env.bq[0], env.aq[0]) if side > 0 else (env.aq[0], env.bq[0])
+            at_touch = px == (env.bp[0] if side > 0 else env.ap[0])
+            if p_adv > self.tau or px == self.blocked[side] or (at_touch and own < self.imb_min * (own + opp)):
+                t[side] = None
+        return t
+
+    def _check_queue(self, env):
+        for side in (+1, -1):
+            cur = self.quote[side]
+            o = env.orders.get(cur[0]) if cur else None
+            if o is not None and o.live and o.queue_ahead > self.max_ahead * self.size and env.cancel(o.oid):
+                self.blocked[side], self.quote[side] = o.px, None
+
+    def on_book(self, env):
+        self._check_queue(env)
+        super().on_book(env)
+
+    def on_trade(self, env, px, qty, aggressor):
+        super().on_trade(env, px, qty, aggressor)
+        self._check_queue(env)
+        if -FAR < env.bp[0] and env.ap[0] < FAR:   # a sweep can empty one side of the shadow book until the next snapshot
+            self.on_book(env)                      # re-quote on every trade: fast infrastructure only
 
 
 class SignalTaker(Strategy):

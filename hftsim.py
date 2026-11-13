@@ -59,6 +59,7 @@ class Order:
     filled: float = 0.0
     queue_ahead: float = 0.0
     live: bool = False
+    queue_at_join: float = -1.0       # queue ahead when the order went live (what a firm estimates from the feed)
 
     @property
     def remaining(self):
@@ -172,14 +173,16 @@ class Exchange:
             return 0.0                         # a level that just formed: the fastest firm arrives first
         return float(q)
 
-    def _activate(self, k):
+    def _activate(self, k, book=False):
+        """Apply orders whose latency has passed. Sub-ms actions also beat the next book snapshot, but never a
+        trade print in the same millisecond: prints sharing a timestamp are one sweep, matched atomically."""
         if not self.pending:
             return
         keep = []
         fast = lambda lat: lat < 1.0           # sub-ms latency: in effect before the next data message
         for item in self.pending:
             act, created, kind, payload = item
-            due = act <= self.now or (created < k and fast(self.p.order_latency_ms if kind != "cancel" else self.p.cancel_latency_ms))
+            due = act <= self.now or (book and created < k and fast(self.p.order_latency_ms if kind != "cancel" else self.p.cancel_latency_ms))
             if not due:
                 keep.append(item); continue
             if kind == "place":
@@ -192,6 +195,7 @@ class Exchange:
                     self.orders.pop(oid, None); self.rejected += 1
                     continue
                 o.live, o.queue_ahead = True, self._join_queue(o)
+                o.queue_at_join = o.queue_ahead
             elif kind == "cancel":
                 o = self.orders.pop(payload, None)
             elif kind == "replace":
@@ -208,6 +212,7 @@ class Exchange:
                     self.orders.pop(new_id, None); self.rejected += 1
                     continue
                 new.live, new.queue_ahead = True, self._join_queue(new)
+                new.queue_at_join = new.queue_ahead
             elif kind == "market":
                 self._take(*payload)
         self.pending = keep
@@ -296,7 +301,7 @@ class Exchange:
         self.bp, self.bq, self.ap, self.aq = list(bp), list(bq), list(ap), list(aq)
         if len(self.born) > 50_000:
             self.born = {key: t for key, t in self.born.items() if ts - t < 60_000}
-        self._activate(k)
+        self._activate(k, book=True)
         for o in list(self.orders.values()):           # snapshot: crossed = filled; cancellations ahead shrink the queue
             if not o.live:
                 continue
@@ -399,6 +404,12 @@ def run_market(name, quick):
                 for kappa in (1.0, 3.0):
                     for q in (0.8, 0.95):
                         grid.append(("C", S.NSQMM, dict(half=half, inv_skew=inv, kappa=kappa, guard=prof.react_to_trades), q))
+        for inv in (0.6, 2.0):                     # Q grid fixed from the day-1 per-fill diagnosis, same for every market
+            for kappa in (0.0, 1.0, 3.0):
+                for tau in (0.1, 0.15, 0.25, 0.35):
+                    for imb in (0.0, 0.5):
+                        grid.append(("Q", S.QueueAwareMM, dict(half=0.5, inv_skew=inv, kappa=kappa, tau=tau, imb_min=imb,
+                                                               max_ahead=0.5, guard=prof.react_to_trades), None))
         for q in (0.9, 0.97, 0.995):
             for hold in (10, 30):
                 grid.append(("T", S.SignalTaker, dict(hold=hold), q))
@@ -407,19 +418,34 @@ def run_market(name, quick):
             r, _ = one(Dtail, Btail, T_tail, p_tail, prof, cls, kw, q, key)
             res.append(r)
         tune = pd.DataFrame(res); tunes.append(tune)
-        names = {"A": "A  market maker, no model", "C": "C  NSQ-MM", "T": "T  signal taker"}
-        for key, cls in (("A", S.QuotingMM), ("C", S.NSQMM), ("T", S.SignalTaker)):
+        for key, cls in (("A", S.QuotingMM), ("C", S.NSQMM), ("Q", S.QueueAwareMM), ("T", S.SignalTaker)):
             best = tune[tune.strategy == key].sort_values("net_pnl").iloc[-1]   # tuned on net P&L: fees are part of the profile
-            kw = {c: best[c] for c in ("half", "inv_skew", "kappa", "guard", "hold") if c in best.index and not pd.isna(best[c])}
+            kw = {c: best[c] for c in ("half", "inv_skew", "kappa", "guard", "hold", "tau", "imb_min", "max_ahead")
+                  if c in best.index and not pd.isna(best[c])}
             for c in ("hold",):
                 if c in kw: kw[c] = int(kw[c])
             if "guard" in kw: kw["guard"] = bool(kw["guard"])
-            r, c = one(Dtest, Btest, T_test, p_test, prof, cls, kw, None if pd.isna(best["q"]) else best["q"], names[key])
+            r, c = one(Dtest, Btest, T_test, p_test, prof, cls, kw, None if pd.isna(best["q"]) else best["q"], NAMES[key])
             rows.append(r); curves[(prof.name, key)] = c
-            print(f"  {prof.name:12s} {names[key]:28s} fills {r['fills']:7,d}  gross {r['gross_pnl']:9.2f}  "
+            if key == "Q" and prof.name == "hft_firm":
+                q_kw = kw
+            print(f"  {prof.name:12s} {NAMES[key]:28s} fills {r['fills']:7,d}  gross {r['gross_pnl']:9.2f}  "
                   f"fees {r['fees']:9.2f}  net {r['net_pnl']:9.2f}")
         print(f"  ({prof.name}: tuned {len(grid)} settings and tested in {time.time() - t0:.0f}s)")
+    # robustness: the Q setting chosen for hft_firm, on the test day, with the profile's optimistic assumptions removed
+    from dataclasses import replace
+    hft = profiles(rm, rt)["hft_firm"]
+    for label, prof in (("hft_firm, no maker rebate", replace(hft, maker_bps=0.0)),
+                        ("hft_firm, 10 ms queue race", replace(hft, race_window_ms=10.0)),
+                        ("hft_firm, back of every queue", replace(hft, queue="back")),
+                        ("hft_firm, 1 ms latency", replace(hft, order_latency_ms=1.0, cancel_latency_ms=1.0))):
+        r, _ = one(Dtest, Btest, T_test, p_test, prof, S.QueueAwareMM, q_kw, None, NAMES["Q"])
+        r["profile"] = label; rows.append(r)
+        print(f"  {label:30s} Q  fills {r['fills']:7,d}  gross {r['gross_pnl']:9.2f}  fees {r['fees']:9.2f}  net {r['net_pnl']:9.2f}")
     return rows, tunes, curves
+
+
+NAMES = {"A": "A  market maker, no model", "C": "C  NSQ-MM", "Q": "Q  NSQ-MM-Q (queue-aware)", "T": "T  signal taker"}
 
 
 def plot(rows, OUTP):
@@ -430,13 +456,13 @@ def plot(rows, OUTP):
     d = pd.DataFrame(rows)
     markets = list(dict.fromkeys(d.market))
     fig, axs = plt.subplots(1, len(markets), figsize=(6 * len(markets), 4), squeeze=False)
-    cols = {"A  market maker, no model": "#9aa5a0", "C  NSQ-MM": "#00b36b", "T  signal taker": "#2a78d6"}
+    cols = dict(zip(NAMES.values(), ("#9aa5a0", "#00b36b", "#e0a100", "#2a78d6")))
     profs = ["retail", "hft_firm", "frictionless"]
     for ax, m in zip(axs[0], markets):
-        x = np.arange(len(profs)); w = 0.26
+        x = np.arange(len(profs)); w = 0.2
         for i, (s, col) in enumerate(cols.items()):
             v = [d[(d.market == m) & (d.profile == p) & (d.strategy == s)].net_pnl.iloc[0] for p in profs]
-            ax.bar(x + (i - 1) * w, v, w, color=col, label=s)
+            ax.bar(x + (i - 1.5) * w, v, w, color=col, label=s)
         ax.axhline(0, color="#777", lw=1)
         ax.set_xticks(x, ["retail", "HFT firm", "frictionless"])
         ax.set(title=m, ylabel="net P&L after fees (USDT)")
@@ -483,7 +509,13 @@ def selftest():
     ex4.on_book(120, bp, bq, ap, aq, 4)
     assert oid not in ex4.orders and ex4.orders[new].live and ex4.orders[new].px == 99 and ex4.messages == 2
     # strategies run end to end on synthetic data
-    for cls, kw in ((S.QuotingMM, {}), (S.NSQMM, {"guard": True}), (S.SignalTaker, {})):
+    # a sweep is atomic: prints sharing a millisecond cannot be dodged by a cancel sent between them
+    ex5 = Exchange(P["hft_firm"], 0.01); ex5.on_book(0, bp, bq, ap, aq, 1)
+    ex5.on_trade(5, 100, 0.0, -1, 2); oid = ex5.place(+1, 100, 1.0); ex5.cancel(oid)
+    ex5.on_trade(5, 100, 4.0, -1, 3)                                    # same ms: the place and the cancel wait
+    assert not ex5.fills and oid in ex5.orders and not ex5.orders[oid].live
+    for cls, kw in ((S.QuotingMM, {}), (S.NSQMM, {"guard": True}), (S.QueueAwareMM, {"tau": 0.5, "guard": True}),
+                    (S.SignalTaker, {})):
         ex3 = Exchange(P["hft_firm"], 0.01)
         n = 50
         prob = np.tile([0.1, 0.2, 0.7], (n, 1))
