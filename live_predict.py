@@ -167,7 +167,8 @@ class Engine:
         self.n += 1
         self._last_r = r
         self.series.append({"t": exch_ts, "mid": mid, "bid": float(r[0]), "ask": float(r[10]), "pred": int(cls),
-                            "conf": round(conf, 3), "out": None, "i": i})
+                            "conf": round(conf, 3), "out": None, "i": i,
+                            "lv": [r[0:5].tolist(), r[5:10].tolist(), r[10:15].tolist(), r[15:20].tolist()]})  # depth heatmap
         self._resolve()
         if self.log is not None:
             self.w.writerow([exch_ts, mid, CLASSES[cls], round(conf, 4), ns, None if lag is None else round(lag, 2), ""])
@@ -204,7 +205,7 @@ class Engine:
             "latency": {"compute_p50_us": float(np.percentile(cn, 50)) / 1000, "compute_p99_us": float(np.percentile(cn, 99)) / 1000,
                         "lag_p50_ms": None if lg is None else float(np.percentile(lg, 50)),
                         "lag_p99_ms": None if lg is None else float(np.percentile(lg, 99))},
-            "series": [{k: s[k] for k in ("t", "mid", "bid", "ask", "pred", "conf", "out")} for s in self.series],
+            "series": [{k: s[k] for k in ("t", "mid", "bid", "ask", "pred", "conf", "out", "lv")} for s in self.series],
             "book": self._book(),
             "hist": {k: list(v) for k, v in self.hist.items()},
         }
