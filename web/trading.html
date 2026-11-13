@@ -50,7 +50,20 @@
   .legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink2); flex-wrap: wrap; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .ln { width: 16px; height: 0; border-top: 2px solid; display: inline-block; }
-  #price { width: 100%; height: 380px; } #equity { width: 100%; height: 240px; }
+  #price { width: 100%; height: 460px; } #equity { width: 100%; height: 240px; }
+  .scale { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--mono); color: var(--muted); }
+  .scale i { width: 96px; height: 8px; border-radius: 2px;
+    background: linear-gradient(90deg, #0d1430, #18348c, #2169d6, #26b2de, #76de8c, #f6d648, #ff8a28, #fff6e1); }
+  .well { background: #0b1020; border-radius: 6px; padding: 6px 4px 2px; }
+  .tools { display: flex; align-items: center; gap: 14px; margin-left: auto; flex-wrap: wrap; }
+  .seg { display: inline-flex; border: 1px solid var(--line2); border-radius: 5px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); color: var(--ink2); font: 500 12px var(--sans); padding: 6px 11px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line2); }
+  .seg button.on { background: var(--ink); color: #fff; }
+  .contrast { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink2); }
+  .contrast input { width: 96px; accent-color: var(--brand); }
+  .dotkey { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(13,22,38,.25); }
+  .chartfoot { font-size: 11.5px; color: var(--muted); margin-top: 6px; }
   .steps { display: flex; flex-direction: column; gap: 10px; }
   .step { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; background: var(--panel2); }
   .step h3 { margin: 0 0 8px; font: 600 11px/1 var(--sans); letter-spacing: .12em; color: var(--brand); }
@@ -98,15 +111,21 @@
 
   <section class="row2">
     <div class="card">
-      <div class="head"><h2>Live price, NSQ-MM quotes and fills</h2>
-        <div class="legend">
-          <span><i class="ln" style="border-color:#0d1626"></i>Mid</span>
-          <span><i class="ln" style="border-color:#0b8457;border-top-style:dashed"></i>Our bid</span>
-          <span><i class="ln" style="border-color:#c92f3d;border-top-style:dashed"></i>Our ask</span>
-          <span><svg width="12" height="12"><path d="M6 1 L11 10 L1 10 Z" fill="#0b8457"/></svg>We bought</span>
-          <span><svg width="12" height="12"><path d="M6 11 L11 2 L1 2 Z" fill="#c92f3d"/></svg>We sold</span>
+      <div class="head"><h2>Order-book depth &amp; traded volume</h2>
+        <div class="tools">
+          <label class="contrast">Contrast <input type="range" id="contrast" min="85" max="100" value="99" aria-label="Heatmap contrast: percentile of resting size that maps to the brightest colour"></label>
+          <div class="seg" role="group" aria-label="Price range"><button class="on" data-zoom="follow">Follow price</button><button data-zoom="full">Full range</button></div>
+        </div>
+        <div class="legend" style="width:100%">
+          <span class="scale" title="Resting size at each price, full Bybit book">0<i></i><span id="qmax">–</span></span>
+          <span><i class="ln" style="border-color:#16c784"></i>Best bid</span>
+          <span><i class="ln" style="border-color:#ea3943"></i>Best ask</span>
+          <span><i class="dotkey" style="background:#2ee59d"></i><i class="dotkey" style="background:#ff5a6a"></i>Traded volume · buy / sell aggressor</span>
+          <span><i class="ln" style="border-color:#6b7a99;border-top-style:dashed"></i>Our quotes</span>
+          <span><svg width="12" height="12"><path d="M6 1 L11 10 L1 10 Z" fill="#0b8457"/></svg><svg width="12" height="12"><path d="M6 11 L11 2 L1 2 Z" fill="#c92f3d"/></svg>Our fills</span>
         </div></div>
-      <div id="price" role="img" aria-label="Live mid price with NSQ-MM quotes and fills"></div>
+      <div class="well"><div id="price" role="img" aria-label="Depth heatmap: resting order-book size by price over time on a dark background, traded volume as dots, best bid and ask lines, NSQ-MM quotes and fills, and the current book on the right"></div></div>
+      <div class="chartfoot">Brighter = more resting size (Bybit 200-level book, ±150 ticks around the mid, a column every 300 ms, last 2 min). Dots: traded volume per price per column. Right edge: current book. Scroll on the chart to zoom the price axis, drag to pan. <b id="hov" style="color:var(--ink);font-family:var(--mono);font-weight:500"></b></div>
     </div>
     <div class="card">
       <div class="head"><h2>The algorithm, live</h2></div>
@@ -151,17 +170,99 @@ const px = v => v == null ? "–" : Number(v).toLocaleString("en-US", { minimumF
 const TIP = { backgroundColor: "#fff", borderColor: "#cfd5de", textStyle: { color: INK }, extraCssText: "border-radius:6px; box-shadow:0 6px 24px rgba(13,22,38,.12)" };
 const price = echarts.init($("price")), equity = echarts.init($("equity"));
 const grad = a => new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: `rgba(31,79,214,${a})` }, { offset: 1, color: "rgba(31,79,214,0)" }]);
+// Depth heatmap: resting size at every price over time, hot colour scale on a dark well; dots = traded volume.
+const HOT = [[13,20,48],[24,52,140],[33,105,214],[38,178,222],[118,222,140],[246,214,72],[255,138,40],[255,246,225]];
+const AX = "#8f9bb3", WGRID = "#17203a", BB = "#16c784", BA = "#ea3943";
+let QMAX = 1, QLO = 1, TVMAX = 1, TICK = 0.01, PW = 140, zoomMode = "follow", zooming = false, LASTMID = null;
+// History accumulates in the page: the server sends only its newest columns each refresh (heat.json once, on open).
+let HC = [], TRD = [], HIMG = null;
+const HMAX = 400, PXMS = 100, SY = 3;          // keep 2 min; bitmap: 1 px per 100 ms, 3 px per tick
+const heatCanvas = document.createElement("canvas");
+function mergeHeat(cols, trades) {
+  const lastT = HC.length ? HC[HC.length - 1][0] : -1;
+  for (const c of cols || []) if (c[0] > lastT) HC.push(c);
+  if (HC.length > HMAX) HC.splice(0, HC.length - HMAX);
+  const lastTr = TRD.length ? TRD[TRD.length - 1][1] : -1;
+  for (const r of trades || []) if (r[1] > lastTr) TRD.push(r);
+  const t0 = HC.length ? HC[0][0] : 0;
+  let k = 0; while (k < TRD.length && TRD[k][1] <= t0) k++;
+  if (k) TRD.splice(0, k);
+}
+function heatRGB(q) {
+  const t = Math.pow(Math.min(1, Math.max(0, Math.log(q / QLO) / Math.log(QMAX / QLO))), 1.8) * (HOT.length - 1);   // log between floor and cap, gamma: only walls glow
+  const i = Math.min(HOT.length - 2, Math.floor(t)), f = t - i, a = HOT[i], b = HOT[i + 1];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+const pctl = (arr, f) => { const a = arr.slice().sort((x, y) => x - y); return a[Math.floor(f * (a.length - 1))]; };
+function buildHeat() {
+  if (!HC.length) return null;
+  let lo = Infinity, hi = -Infinity;
+  const sample = [];
+  HC.forEach((c, j) => { lo = Math.min(lo, c[1]); hi = Math.max(hi, c[1] + c[4].length - 1); if (j % 3 === 0) c[4].forEach(v => v > 0 && sample.push(v)); });
+  if (sample.length) { QLO = Math.max(1e-9, pctl(sample, 0.3)); QMAX = Math.max(QLO * 1.5, pctl(sample, +$("contrast").value / 100)); $("qmax").textContent = "≥ " + qfmt(QMAX); }
+  const t0 = HC[0][0], t1 = HC[HC.length - 1][0] + HEAT_STEP;
+  const W = Math.max(1, Math.ceil((t1 - t0) / PXMS)), Hh = (hi - lo + 1) * SY;
+  heatCanvas.width = W; heatCanvas.height = Hh;
+  const ctx = heatCanvas.getContext("2d"), img = ctx.createImageData(W, Hh), d = img.data;
+  HC.forEach((c, j) => {
+    const x0 = Math.floor((c[0] - t0) / PXMS), x1 = Math.ceil(((j + 1 < HC.length ? HC[j + 1][0] : t1) - t0) / PXMS);
+    const base = c[1], q = c[4];
+    for (let k = 0; k < q.length; k++) {
+      if (!(q[k] > 0)) continue;
+      const [r, g, b] = heatRGB(q[k]), y0 = (hi - base - k) * SY;
+      for (let y = y0; y < y0 + SY; y++) for (let x = x0; x < x1; x++) { const i = (y * W + x) * 4; d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255; }
+    }
+  });
+  ctx.putImageData(img, 0, 0);
+  return { t0, t1, lo, hi };
+}
+const HEAT_STEP = 300;
+const qfmt = v => v >= 1000 ? (v / 1000).toFixed(1) + "k" : v >= 10 ? v.toFixed(0) : v.toFixed(2);
+const tstr = t => new Date(t).toLocaleTimeString("en-GB", { hour12: false });
+function layoutPrice() {
+  PW = $("price").clientWidth < 640 ? 84 : 140;
+  return { grid: [{ left: 68, right: PW + 22, top: 8, bottom: 26 }, { right: 8, width: PW, top: 8, bottom: 26 }] };
+}
 price.setOption({
-  animationDurationUpdate: 300, grid: { left: 70, right: 16, top: 14, bottom: 28 },
-  tooltip: { ...TIP, trigger: "axis" },
-  xAxis: { type: "time", axisLabel: { color: INK2, fontFamily: "IBM Plex Mono", fontSize: 11, formatter: "{HH}:{mm}:{ss}", hideOverlap: true }, axisLine: { lineStyle: { color: "#cfd5de" } }, splitLine: { show: false } },
-  yAxis: { type: "value", scale: true, axisLabel: { color: INK2, fontFamily: "IBM Plex Mono", fontSize: 11, formatter: v => v.toFixed(2) }, splitLine: { lineStyle: { color: GRID } } },
+  animation: false, backgroundColor: "#0b1020", ...layoutPrice(),
+  tooltip: { ...TIP, trigger: "item", formatter: p => {
+    const v = p.value;
+    if (p.seriesId === "prof") return `Current book<br>${v[2] > 0 ? "Bid" : "Ask"} ${px(v[1])}: <b>${qfmt(v[0])}</b>`;
+    if (p.seriesId === "trades") return `<b>${tstr(v[0])}</b><br>${v[3] > 0 ? "Buy" : "Sell"} aggressor at ${px(v[1])}: <b>${qfmt(v[2])}</b> traded`;
+    return `<b>${tstr(v[0])}</b><br>${p.seriesName} at ${px(v[1])}`;
+  } },
+  dataZoom: [{ type: "inside", yAxisIndex: [0, 1], filterMode: "none", moveOnMouseWheel: false }],
+  xAxis: [{ gridIndex: 0, type: "time", axisLabel: { color: AX, fontFamily: "IBM Plex Mono", fontSize: 11, formatter: "{HH}:{mm}:{ss}", hideOverlap: true }, axisLine: { lineStyle: { color: "#2a3550" } }, axisTick: { show: false }, splitLine: { show: false } },
+          { gridIndex: 1, type: "value", min: 0, show: false }],
+  yAxis: [{ gridIndex: 0, type: "value", axisLabel: { color: AX, fontFamily: "IBM Plex Mono", fontSize: 11, formatter: v => v.toFixed(2) }, splitLine: { lineStyle: { color: WGRID } } },
+          { gridIndex: 1, type: "value", show: false }],
   series: [
-    { id: "mid", name: "Mid", type: "line", showSymbol: false, data: [], lineStyle: { color: INK, width: 1.8 }, areaStyle: { color: grad(.08), origin: "start" } },
-    { id: "qb", name: "Our bid", type: "line", step: "end", showSymbol: false, data: [], connectNulls: false, lineStyle: { color: NEON, width: 1.5, type: "dashed" } },
-    { id: "qa", name: "Our ask", type: "line", step: "end", showSymbol: false, data: [], connectNulls: false, lineStyle: { color: DOWN, width: 1.5, type: "dashed" } },
-    { id: "buy", name: "We bought", type: "scatter", symbol: "triangle", symbolSize: 13, symbolOffset: [0, 12], data: [], z: 6, itemStyle: { color: NEON, borderColor: "#fff", borderWidth: 1 } },
-    { id: "sell", name: "We sold", type: "scatter", symbol: "triangle", symbolRotate: 180, symbolSize: 13, symbolOffset: [0, -12], data: [], z: 6, itemStyle: { color: DOWN, borderColor: "#fff", borderWidth: 1 } },
+    { id: "heat", type: "custom", clip: true, silent: true, data: [], z: 1, renderItem: (params, api) => {
+      if (!HIMG) return;
+      const a = api.coord([HIMG.t0, (HIMG.hi + 0.5) * TICK]), b = api.coord([HIMG.t1, (HIMG.lo - 0.5) * TICK]);
+      return { type: "image", style: { image: heatCanvas, x: a[0], y: a[1], width: b[0] - a[0], height: b[1] - a[1] } };
+    } },
+    { id: "prof", type: "custom", xAxisIndex: 1, yAxisIndex: 1, clip: true, data: [], encode: { x: 0, y: 1 }, z: 5, renderItem: (params, api) => {
+      const q = api.value(0), p = api.value(1), side = api.value(2);
+      const a = api.coord([0, p]), b = api.coord([q, p]), h = Math.abs(api.size([0, TICK])[1]), hh = Math.max(1.5, Math.min(h - 0.5, 18));
+      const kids = [
+        { type: "rect", shape: { x: a[0], y: a[1] - hh / 2, width: Math.max(1, b[0] - a[0]), height: hh }, style: { fill: side > 0 ? "rgba(22,199,132,.45)" : "rgba(234,57,67,.45)" } },
+        { type: "rect", shape: { x: a[0], y: a[1] - hh / 2, width: 2, height: hh }, style: { fill: side > 0 ? BB : BA } },
+      ];
+      if (h >= 13) kids.push({ type: "text", x: a[0] + 6, y: a[1], silent: true,
+        style: { text: PW > 100 ? `${px(p)}  ${qfmt(q)}` : qfmt(q), fill: "#e6ebf5", font: "500 11px 'IBM Plex Mono', monospace", verticalAlign: "middle", align: "left" } });
+      return { type: "group", children: kids };
+    } },
+    { id: "bbid", name: "Best bid", type: "line", step: "end", showSymbol: false, silent: true, data: [], z: 5, lineStyle: { color: BB, width: 2 } },
+    { id: "bask", name: "Best ask", type: "line", step: "end", showSymbol: false, silent: true, data: [], z: 5, lineStyle: { color: BA, width: 2 } },
+    { id: "mid", name: "Mid", type: "line", showSymbol: false, silent: true, data: [], z: 3, lineStyle: { opacity: 0 } },
+    { id: "trades", name: "Traded", type: "scatter", data: [], z: 4,
+      symbolSize: v => Math.min(26, 3 + 21 * Math.sqrt(v[2] / TVMAX)),
+      itemStyle: { color: p => p.value[3] > 0 ? "rgba(46,229,157,.62)" : "rgba(255,90,106,.62)", borderColor: "rgba(255,255,255,.75)", borderWidth: 0.6 } },
+    { id: "qb", name: "Our bid", type: "line", step: "end", showSymbol: false, silent: true, data: [], z: 4, connectNulls: false, lineStyle: { color: "#ffffff", width: 1, type: "dashed", opacity: .5 } },
+    { id: "qa", name: "Our ask", type: "line", step: "end", showSymbol: false, silent: true, data: [], z: 4, connectNulls: false, lineStyle: { color: "#ffffff", width: 1, type: "dashed", opacity: .5 } },
+    { id: "buy", name: "We bought", type: "scatter", symbol: "triangle", symbolSize: 13, symbolOffset: [0, 12], data: [], z: 6, itemStyle: { color: BB, borderColor: "#fff", borderWidth: 1.5 } },
+    { id: "sell", name: "We sold", type: "scatter", symbol: "triangle", symbolRotate: 180, symbolSize: 13, symbolOffset: [0, -12], data: [], z: 6, itemStyle: { color: BA, borderColor: "#fff", borderWidth: 1.5 } },
   ]
 });
 equity.setOption({
@@ -215,13 +316,39 @@ function render(S) {
   }
   const ser = S.series;
   const fC = S.fills.filter(f => f.strategy === "C" && ser.length && f.t >= ser[0][0]);
-  price.setOption({ series: [
-    { id: "mid", data: ser.map(r => [r[0], r[1]]) },
+  if (S.tick) TICK = S.tick;
+  mergeHeat(S.heat, S.trades_heat);
+  HIMG = buildHeat();
+  const prof = [], last = HC[HC.length - 1];
+  if (last) last[4].forEach((v, k) => { const tk = last[1] + k; if (v > 0) prof.push([v, tk * TICK, tk <= last[2] ? 1 : -1]); });
+  let lo = HIMG ? HIMG.lo * TICK : Infinity, hi = HIMG ? HIMG.hi * TICK : -Infinity;
+  const x0 = HC.length ? HC[0][0] : ser.length ? ser[0][0] : null;
+  const dots = [];
+  TRD.forEach(([t0, t1, tk, b, sv]) => {
+    const tc = (t0 + t1) / 2;
+    if (b > 0) dots.push([tc, tk * TICK, b, 1]);
+    if (sv > 0) dots.push([tc, tk * TICK, sv, -1]);
+  });
+  TVMAX = dots.length ? Math.max(1e-9, pctl(dots.map(d => d[2]), 0.99)) : 1;
+  ser.forEach(r => { lo = Math.min(lo, r[2]); hi = Math.max(hi, r[3]); });
+  const yr = Number.isFinite(lo) ? { min: +(lo - TICK).toFixed(6), max: +(hi + TICK).toFixed(6) } : { min: null, max: null };
+  LASTMID = ser.length ? ser[ser.length - 1][1] : null;
+  price.setOption({ xAxis: [{ min: x0 }, { max: Math.max(1e-9, ...prof.map(r => r[0])) * 1.12 }], yAxis: [yr, yr], series: [
+    { id: "heat", data: [[Date.now()]] },
+    { id: "prof", data: prof },
+    { id: "bbid", data: ser.map(r => [r[0], r[2]]) },
+    { id: "bask", data: ser.map(r => [r[0], r[3]]) },
+    { id: "trades", data: dots },
+    { id: "mid", data: ser.map(r => [r[0], r[1]]), markLine: LASTMID == null ? undefined : { silent: true, symbol: "none",
+      lineStyle: { color: "#e6ebf5", type: "dotted", width: 1, opacity: .5 },
+      label: { position: "insideEndTop", formatter: () => px(LASTMID), backgroundColor: "#e6ebf5", color: "#0b1020", padding: [3, 6], borderRadius: 3, fontFamily: "IBM Plex Mono", fontSize: 11 },
+      data: [{ yAxis: LASTMID }] } },
     { id: "qb", data: ser.map(r => [r[0], r[4]]) },
     { id: "qa", data: ser.map(r => [r[0], r[5]]) },
     { id: "buy", data: fC.filter(f => f.side > 0).map(f => [f.t, f.price]) },
     { id: "sell", data: fC.filter(f => f.side < 0).map(f => [f.t, f.price]) },
   ] });
+  applyZoom();
   equity.setOption({ series: ["C", "A", "T"].map(k => ({ id: k, data: S.equity[k] })) });
   const name = { A: '<span class="tag tA">A</span>', C: '<span class="tag tC">C</span>', T: '<span class="tag tT">T</span>' };
   $("fills").innerHTML = "<tr><th>Time</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th></tr>" +
@@ -240,8 +367,31 @@ async function poll() {
   catch (e) { if (++fails > 3) { $("live").className = "pill off"; $("liveTxt").textContent = "Waiting for feed"; } }
   setTimeout(poll, 700);
 }
-window.addEventListener("resize", () => { price.resize(); equity.resize(); });
-poll();
+function applyZoom() {
+  if (LASTMID == null) return;
+  zooming = true;
+  if (zoomMode === "follow") price.dispatchAction({ type: "dataZoom", dataZoomIndex: 0, startValue: LASTMID - 25 * TICK, endValue: LASTMID + 25 * TICK });
+  else if (zoomMode === "full") price.dispatchAction({ type: "dataZoom", dataZoomIndex: 0, start: 0, end: 100 });
+  zooming = false;
+}
+price.getZr().on("mousemove", e => {
+  const [t, p] = price.convertFromPixel({ gridIndex: 0 }, [e.offsetX, e.offsetY]);
+  let j = HC.length - 1; while (j >= 0 && HC[j][0] > t) j--;
+  const c = HC[j], tk = Math.round(p / TICK);
+  const q = c && t <= c[0] + 1000 ? c[4][tk - c[1]] : undefined;
+  $("hov").textContent = q == null ? "" : `· ${tstr(c[0])} · ${px(tk * TICK)} · ${q > 0 ? qfmt(q) + " resting" : "empty"}`;
+});
+price.on("datazoom", () => { if (zooming) return; zoomMode = "manual"; document.querySelectorAll(".seg button").forEach(x => x.classList.remove("on")); });
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("on", x === b));
+  zoomMode = b.dataset.zoom; applyZoom();
+});
+window.addEventListener("resize", () => { price.setOption(layoutPrice()); price.resize(); equity.resize(); });
+(async () => {
+  const q = new URLSearchParams(location.search);
+  try { const r = await fetch((q.get("heat") || "heat.json") + "?ts=" + Date.now(), { cache: "no-store" }); if (r.ok) { const h = await r.json(); if (h.tick) TICK = h.tick; mergeHeat(h.heat, h.trades_heat); } } catch (e) {}
+  poll();
+})();
 </script>
 </body>
 </html>

@@ -403,7 +403,7 @@ if (hm) hm.setOption({
     { gridIndex: 1, type: "value", show: false },
   ],
   series: [
-    { id: "heat", type: "custom", xAxisIndex: 0, yAxisIndex: 0, clip: true, data: [], encode: { x: 0, y: 1 }, z: 1,
+    { id: "heat", type: "custom", xAxisIndex: 0, yAxisIndex: 0, clip: true, progressive: 0, data: [], encode: { x: 0, y: 1 }, z: 1,
       renderItem: (params, api) => {
         const c = api.coord([api.value(0), api.value(1)]), s = api.size([1, TICK]);
         const h = Math.max(2, Math.abs(s[1]));

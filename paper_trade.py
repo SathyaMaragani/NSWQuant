@@ -30,6 +30,7 @@ OUT = ROOT / "results" / "paper"
 WS_URL = "wss://stream.bybit.com/v5/public/linear"
 P_KEYS = ["W1", "b1", "m1", "r1", "W2", "b2", "m2", "r2", "W3", "b3"]
 LAT_MS = 50
+HEAT_W, HEAT_MS, HEAT_N = 150, 300, 400   # depth heatmap: +-150 ticks around the mid, a column every 300 ms, 2 min kept
 
 
 class LiveBook:
@@ -116,6 +117,8 @@ class Engine:
         self.st, self.xb, self.xq, self.h1, self.h2, self.lg = tm.buffers({"mu": self.mu, "P": self.P})
         self.book = LiveBook()
         self.series = deque(maxlen=900)            # ~90 s of book events
+        self.heat, self.last_heat, self.last_hist = deque(maxlen=HEAT_N), 0, 0.0   # depth heatmap columns
+        self.tbucket, self.trade_heat = {}, deque(maxlen=8000)   # traded volume per price per column: [t0, t1, tick, buy, sell]
         self.eq = {k: deque(maxlen=3600) for k in ("A", "C", "T")}
         self.mids = deque(maxlen=20000)            # (ts, mid ticks) for markouts
         self.decide_us, self.net_ms = deque(maxlen=2000), deque(maxlen=2000)
@@ -163,15 +166,33 @@ class Engine:
                      "quote_ask": None if C.target[-1] is None else C.target[-1] * self.tick,
                      "book": {"bp": bp, "bq": bq, "ap": ap, "aq": aq}}
         self.series.append([ts, round(mid * self.tick, 4), bp[0], ap[0], self.last["quote_bid"], self.last["quote_ask"]])
+        if ts - self.last_heat >= HEAT_MS:
+            t0 = self.last_heat or ts
+            for tk, (b, sv) in self.tbucket.items():
+                self.trade_heat.append([t0, ts, tk, round(b, 4), round(sv, 4)])
+            self.tbucket = {}
+            self.heat.append(self.heat_column(ts, mid, bpt[0], apt[0]))
+            self.last_heat = ts
         if ts - self.last_eq_ts >= 1000:
             for k, s in (("A", self.strat["A"]), ("C", self.strat["C"]), ("T", self.taker)):
                 self.eq[k].append([ts, round(s.equity_ticks(mid) * self.tick, 4)])
             self.last_eq_ts = ts
         self.n_book += 1
 
+    def heat_column(self, ts, mid, bid, ask):
+        """[ts, lowest tick, best bid tick, best ask tick, resting size at each tick lo..lo+2W] from the full book."""
+        lo, col = int(round(mid)) - HEAT_W, [0.0] * (2 * HEAT_W + 1)
+        for book in (self.book.bids, self.book.asks):
+            for p, q in book.items():
+                k = self.ticks(p) - lo
+                if 0 <= k <= 2 * HEAT_W:
+                    col[k] = round(q, 3)
+        return [ts, lo, bid, ask, col]
+
     def on_trade_msg(self, msg):
         for t in msg["data"]:
             ts, px, q, side = int(t["T"]), self.ticks(float(t["p"])), float(t["v"]), (1 if t["S"] == "Buy" else -1)
+            self.tbucket.setdefault(px, [0.0, 0.0])[0 if side > 0 else 1] += q
             self.strat["A"].on_trade(ts, px, q, side)
             self.strat["C"].on_trade(ts, px, q, side)
             self.n_trades += 1
@@ -212,7 +233,8 @@ class Engine:
             "uptime_s": int(time.time() - self.started), "book_events": self.n_book, "trades": self.n_trades,
             "unit": self.unit, "tick": self.tick, "latency_ms_sim": LAT_MS,
             "fees_bps": {"maker": self.maker_bps, "taker": self.taker_bps}, "params": self.params,
-            "last": self.last, "series": list(self.series), "equity": {k: list(v) for k, v in self.eq.items()},
+            "last": self.last, "series": list(self.series), **self.heat_payload(12),   # newest heat columns only; the page keeps the history
+            "equity": {k: list(v) for k, v in self.eq.items()},
             "strategies": {"A": self.summary("A", S["A"], self.maker_bps), "C": self.summary("C", S["C"], self.maker_bps),
                            "T": self.summary("T", self.taker, self.taker_bps)},
             "fills": fills[-60:],
@@ -221,14 +243,27 @@ class Engine:
             "backtest": BACKTEST,
         }
 
+    def heat_payload(self, n=None):
+        cols = list(self.heat)[-n:] if n else list(self.heat)
+        t0 = cols[0][0] if cols else 0
+        return {"heat": cols, "trades_heat": [r for r in self.trade_heat if r[1] > t0]}
+
     def publish(self):
-        tmp = OUT / "state.json.tmp"
-        tmp.write_text(json.dumps(self.state(), default=float))
-        for _ in range(20):
-            try:
-                os.replace(tmp, OUT / "state.json"); break
-            except PermissionError:
-                time.sleep(0.005)
+        write_json(OUT / "state.json", self.state())
+        if time.time() - self.last_hist > 5:       # full heatmap history for a page that just opened (written off the feed thread)
+            self.last_hist = time.time()
+            hist = {"tick": self.tick, **self.heat_payload()}
+            threading.Thread(target=write_json, args=(OUT / "heat.json", hist), daemon=True).start()
+
+
+def write_json(path, obj):
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(obj, default=float, separators=(",", ":")))
+    for _ in range(20):
+        try:
+            os.replace(tmp, path); return
+        except PermissionError:
+            time.sleep(0.005)
 
 
 def load_backtest():
@@ -313,7 +348,21 @@ def selftest():
     t.on_book(2, 102, 103, up); t.on_book(3, 102, 103, up)   # hold 2 events -> exit decided
     t.on_book(4, 104, 105, up)      # exit at bid 104
     assert t.fills[0][2] == 101 and t.fills[1][2] == 104 and t.pos == 0 and t.equity_ticks(0) == 3
-    print("selftest ok: live book rebuild and taker state machine")
+    stub = type("E", (), {"book": b, "ticks": staticmethod(lambda x: int(round(x)))})()
+    ts, lo, bid, ask, col = Engine.heat_column(stub, 7, 100.0, 99, 101)    # tick 1, mid 100: column covers 70..130
+    assert lo == 100 - HEAT_W and col[99 - lo] == 1 and col[100 - lo] == 0 and col[101 - lo] == 5 and col[106 - lo] == 2
+    model = ROOT / "models" / "ethusdt_mm.npz"
+    if model.exists():                     # the published state carries every key the page reads
+        eng = Engine(model, "ETHUSDT")
+        book = {"b": [[f"{2000 - 0.01 * i:.2f}", "1"] for i in range(10)], "a": [[f"{2000.01 + 0.01 * i:.2f}", "2"] for i in range(10)]}
+        eng.on_book_msg({"type": "snapshot", "ts": 1000, "data": book})
+        eng.on_trade_msg({"data": [{"T": 1100, "p": "2000.01", "v": "0.5", "S": "Buy"}]})
+        eng.on_book_msg({"type": "delta", "ts": 1400, "data": {"b": [], "a": []}})
+        st = eng.state()
+        need = {"strategies", "equity", "series", "heat", "trades_heat", "fills", "latency", "params", "last", "tick"}
+        assert need <= st.keys(), need - st.keys()
+        assert len(st["heat"]) == 2 and st["trades_heat"] == [[1000, 1400, eng.ticks(2000.01), 0.5, 0.0]]
+    print("selftest ok: live book rebuild, taker state machine, depth heat column, published state")
 
 
 if __name__ == "__main__":
