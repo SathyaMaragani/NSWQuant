@@ -1,0 +1,74 @@
+{
+  "ETHUSDT perpetual (Bybit)": {
+    "alpha_ticks": 0.0,
+    "class_move": [
+      -13.581,
+      0.0,
+      14.054
+    ],
+    "train_events": 668088,
+    "tail_events": "117908",
+    "bytes": 532,
+    "tuned": {
+      "A": {
+        "half": 2.5,
+        "inv_skew": 0.2,
+        "kappa": 0.0,
+        "pull_quantile": null,
+        "hold_events": null
+      },
+      "C": {
+        "half": 2.5,
+        "inv_skew": 0.2,
+        "kappa": 3.0,
+        "pull_quantile": 0.95,
+        "hold_events": null
+      },
+      "T": {
+        "half": null,
+        "inv_skew": null,
+        "kappa": null,
+        "pull_quantile": 0.9,
+        "hold_events": 30.0
+      }
+    },
+    "trades_test": 931768,
+    "book_events_test": 767902
+  },
+  "BTCUSDT spot (Bybit)": {
+    "alpha_ticks": 0.0,
+    "class_move": [
+      -41.518,
+      0.0,
+      42.573
+    ],
+    "train_events": 477118,
+    "tail_events": "84208",
+    "bytes": 532,
+    "tuned": {
+      "A": {
+        "half": 2.5,
+        "inv_skew": 0.2,
+        "kappa": 0.0,
+        "pull_quantile": null,
+        "hold_events": null
+      },
+      "C": {
+        "half": 2.5,
+        "inv_skew": 0.2,
+        "kappa": 3.0,
+        "pull_quantile": 0.8,
+        "hold_events": null
+      },
+      "T": {
+        "half": null,
+        "inv_skew": null,
+        "kappa": null,
+        "pull_quantile": 0.9,
+        "hold_events": 30.0
+      }
+    },
+    "trades_test": 391035,
+    "book_events_test": 499613
+  }
+}
