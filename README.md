@@ -32,6 +32,32 @@ Backtest (`strategy.py`): event-driven replay of book + trade ticks, queue posit
 At Bybit VIP0 retail fees every variant is negative; the model's value is fewer toxic fills (market maker)
 and a gross edge that decays with latency (taker). Full table: `results/trading/backtest.csv`.
 
+## HFT simulation environment (`hftsim.py` + `strategies.py`)
+Replays the real book snapshots and every trade print, so strategy work is separated from infrastructure.
+Infrastructure is a switch:
+
+| profile | order/cancel latency | queue position | fees (maker / taker) | reacts to |
+|---|---|---|---|---|
+| `retail` | 50 ms | back of the queue | Bybit VIP0 | book updates |
+| `hft_firm` | 10 µs (co-location) | first at a level that just formed | −0.5 bp rebate / 2 bp | every trade |
+| `frictionless` | 0 | front of every queue | 0 / 0 | every trade |
+
+`hft_firm` values are assumptions standing in for co-location and a market-maker fee tier, not measurements.
+Write a strategy by subclassing `hftsim.Strategy` (`on_book`, `on_trade`, `on_fill`) and using
+`env.place / replace / cancel / market`. Each strategy is tuned per profile on 9 Nov and tested once on 10 Nov.
+
+Net P&L after fees on the test day (USDT):
+
+| | ETH retail | ETH HFT firm | ETH frictionless | BTC retail | BTC HFT firm | BTC frictionless |
+|---|---|---|---|---|---|---|
+| A market maker, no model | −3,586.74 | −652.25 | −1,361.52 | −5,413.84 | −343.00 | −619.95 |
+| C NSQ-MM | −2,096.43 | −232.31 | −411.45 | −3,359.08 | −143.96 | −293.14 |
+| T signal taker | −27.00 | −10.26 | +15.49 | −29.70 | −37.08 | +71.29 |
+
+Infrastructure cuts NSQ-MM's net loss by about 90% (retail → HFT firm). The model cuts the loss by 42–65%
+under every profile. With zero frictions the signal taker is profitable; the market makers still lose to adverse
+selection, which is the problem left for strategy work. Full output: `results/hftsim/`.
+
 ## Main files
 | file | what |
 |---|---|
@@ -43,6 +69,7 @@ and a gross edge that decays with latency (taker). Full table: `results/trading/
 | `experiments.py` | teacher vs student, QAT, Pareto, importance, decision value |
 | `strategy.py` | NSQ-MM market maker, signal taker, event-driven backtester |
 | `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed + dashboard |
+| `hftsim.py`, `strategies.py` | HFT simulation environment with infrastructure profiles; strategy library |
 | `live_predict.py` | live / replay NIFTY inference + dashboard server |
 | `c/` | C feature port, generated model header, benchmark |
 | `web/` | dashboards (ECharts + GSAP, vendored) |
