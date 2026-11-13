@@ -9,7 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="vendor/echarts.min.js"></script>
 <script src="vendor/gsap.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <link rel="stylesheet" href="fx.css">
 <script src="fx.js"></script>
 <style>
@@ -133,6 +132,7 @@
   <span class="grow"></span>
   <span class="pill warn">Simulated orders only · nothing is sent</span>
 </div></header>
+<div id="mq"></div>
 <main class="main">
   <section class="fx-hero">
     <div class="fx-hero-copy">
@@ -148,9 +148,8 @@
         <div><div class="l">Decision time</div><div class="v" id="hD">–</div></div>
       </div>
     </div>
-    <div class="fx-stage" id="terrain" aria-label="3D liquidity terrain: resting order-book size by price and time, bids green, asks red">
-      <div class="fx-key"><span><i style="background:#16c784"></i>bids</span><span><i style="background:#ea3943"></i>asks</span><span>height = resting size</span></div>
-      <div class="fx-cap"><span><b>LIQUIDITY TERRAIN</b> · price × time × size · ±20 ticks · last 15 s</span><span>drag to orbit · scroll to zoom</span></div>
+    <div class="fx-stage" id="terrain" aria-label="Live depth chart: cumulative resting size on the bid side (green, left) and ask side (red, right) around the mid price, with the last few seconds as faint lines">
+      <div class="fx-cap"><span><b>LIVE DEPTH</b> · cumulative resting size · ±40 ticks around the mid</span><span>faint lines = the last 12 s</span></div>
     </div>
   </section>
   <section class="kpis">
@@ -385,11 +384,16 @@ function render(S) {
   if (S.tick) TICK = S.tick;
   mergeHeat(S.heat, S.trades_heat);
   HIMG = buildHeat();
-  TER.update(HC);
+  TER.update(HC, TICK);
   const hc = S.strategies.C;
   $("hP").innerHTML = `<span class="${hc.gross >= 0 ? "pos" : "neg"}">${usd(hc.gross)}</span><small>USDT</small>`;
   $("hF").textContent = hc.fills.toLocaleString();
   $("hD").innerHTML = `${S.latency.decide_p50_us.toFixed(0)}<small>µs</small>`;
+  const Lm = S.last || {}, sp = Lm.ask != null && Lm.bid != null ? Lm.ask - Lm.bid : null;
+  MQ.set([["ETHUSDT", px(Lm.mid)], ["SPREAD", sp == null ? "–" : sp.toFixed(2)], ["NSQ-MM P&L", usd(hc.gross) + " USDT", hc.gross >= 0 ? "pos" : "neg"],
+    ["FILLS", hc.fills.toLocaleString()], ["POSITION", hc.position.toFixed(2)], ["DECISION", S.latency.decide_p50_us.toFixed(1) + " µs"],
+    ["MODEL", "532 B int8"], ["BOOK EVENTS", S.book_events.toLocaleString()], ["TRADES SEEN", S.trades.toLocaleString()],
+    ["BACKTEST · X ETH 9 DAYS", "+727.03 USDT", "pos"], ["ORDERS", "SIMULATED"]]);
   FX.ready();
   const prof = [], last = HC[HC.length - 1];
   if (last) last[4].forEach((v, k) => { const tk = last[1] + k; if (v > 0) prof.push([v, tk * TICK, tk <= last[2] ? 1 : -1]); });
@@ -501,9 +505,11 @@ document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
 });
 window.addEventListener("resize", () => { price.setOption(layoutPrice()); price.resize(); equity.resize(); });
 FX.loader({ title: "Market making, <i>in real time.</i>" });
-const TER = FX.terrain($("terrain"));
+const TER = FX.depth($("terrain"));
 FX.rise(".fx-hero, .kpis, .row2 > .card, .term, .row3 > .card");
 FX.tilt(".kpis .card", 6);
+FX.words(".fx-h1"); FX.cursor(); FX.spotlight(".row2 > .card, .row3 > .card");
+const MQ = FX.marquee($("mq"));
 (async () => {
   const q = new URLSearchParams(location.search);
   try { const r = await fetch((q.get("heat") || "heat.json") + "?ts=" + Date.now(), { cache: "no-store" }); if (r.ok) { const h = await r.json(); if (h.tick) TICK = h.tick; mergeHeat(h.heat, h.trades_heat); } } catch (e) {}

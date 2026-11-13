@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <script src="vendor/echarts.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <link rel="stylesheet" href="fx.css">
 <script src="fx.js"></script>
 <style>
@@ -111,6 +110,7 @@
   <span class="badge">Backtests on recorded data + live paper trading · no real orders</span>
   <div class="seg" role="group" aria-label="Market"><button class="on" data-m="ETHUSDT">ETH</button><button data-m="BTCUSDT">BTC</button></div>
 </div></header>
+<div id="mq"></div>
 
 <main class="wrap">
   <section class="fx-hero">
@@ -128,9 +128,9 @@
         <div class="ks" id="gen" style="margin-top:10px;color:var(--muted)"></div>
       </div>
     </div>
-    <div class="fx-stage" id="bars3d" aria-label="3D bars of net profit per day for X, X0 and Q; bars below the floor are losses">
+    <div class="fx-stage" id="bars3d" aria-label="Cumulative net profit across the out-of-sample days for X, X0 and Q">
       <div class="fx-key"><span><i style="background:#1f4fd6"></i>X · Binance signal</span><span><i style="background:#c0447a"></i>X0 · signal off</span><span><i style="background:#d08c1a"></i>Q · NSQ-MM-Q</span></div>
-      <div class="fx-cap"><span><b>NET P&amp;L PER DAY</b> · <span id="barsRange"></span> · below the floor = loss</span><span>drag to orbit · scroll to zoom</span></div>
+      <div class="fx-cap"><span><b>CUMULATIVE NET P&amp;L</b> · USDT · <span id="barsRange"></span></span><span>dashed line = zero</span></div>
     </div>
   </section>
 
@@ -224,9 +224,11 @@ const AXL = { color: INK2, fontFamily: "IBM Plex Mono", fontSize: 11 };
 const NAMEM = { ETHUSDT: "ETHUSDT perpetual", BTCUSDT: "BTCUSDT spot" };
 let D = null, M = "ETHUSDT";
 FX.loader({ title: "Nine days, <i>out of sample.</i>", status: ["Loading 9 days of order books", "Replaying every trade print", "Scoring out-of-sample days", "Building the results", "Ready"] });
-const BARS = FX.bars3d($("bars3d"));
+const BARS = FX.curves($("bars3d"));
 FX.rise(".fx-hero, .kpis, .wrap > .panel, .grid2, .caveats");
 FX.tilt(".kpis .kpi", 6);
+FX.words(".fx-h1"); FX.cursor(); FX.spotlight(".wrap > .panel, .grid2 > .panel");
+const MQ = FX.marquee($("mq"));
 const cDays = echarts.init($("cDays")), cEq = echarts.init($("cEq"));
 
 function draw() {
@@ -289,9 +291,14 @@ function draw() {
       `<td class="${cls(sx0?.net_total)}">${usd(sx0?.net_total)}</td><td class="${cls(sum.find(r => r.strategy === "Q")?.net_total)}">${usd(sum.find(r => r.strategy === "Q")?.net_total)}</td><td></td></tr>` : "")
     : `<tr><td class="wait">Multi-day test running; this fills in when multiday.py finishes.</td></tr>`;
 
-  BARS.set(dlist.map(dd), { X: dlist.map(d => get(d, "X")?.net_pnl ?? null), X0: dlist.map(d => get(d, "X0")?.net_pnl ?? null), Q: dlist.map(d => get(d, "Q")?.net_pnl ?? null) },
-           { X: C.X, X0: C.X0, Q: C.Q });
+  const cum = k => { let a = 0; return dlist.map(d => +(a += get(d, k)?.net_pnl ?? 0).toFixed(2)); };
+  if (dlist.length) BARS.set(dlist.map(dd), { X: cum("X"), X0: cum("X0"), Q: cum("Q") }, { X: C.X, X0: C.X0, Q: C.Q }, usd);
   $("barsRange").textContent = dlist.length ? `${dd(dlist[0])} – ${dd(dlist[dlist.length - 1])}` : "";
+  const acc2 = (D.accuracy || []).find(r => r.market.includes(M)), lat2 = (D.latency || []).find(r => r.name.startsWith("C full tick"));
+  MQ.set([["MARKET", M], ["X · NET, " + (sx ? sx.days : "–") + " DAYS", sx ? usd(sx.net_total) + " USDT" : "–", sx ? cls(sx.net_total) : ""],
+    ["DAYS PROFITABLE", sx ? `${sx.positive_days}/${sx.days}` : "–"], ["SIGNAL VALUE", $("kSig").textContent.replace("USDT", " USDT"), "pos"],
+    ["TEST DAY 10 NOV", x ? usd(x.net_pnl) + " USDT" : "–", x ? cls(x.net_pnl) : ""], ["ACCURACY", acc2 ? pct(acc2.model) : "–"],
+    ["TOP-10% CALLS", acc2 ? pct(acc2.top10) : "–"], ["DECISION", lat2 ? lat2.p50_us + " µs" : "–"], ["MODEL", "532 B int8"], ["P&L", "SIMULATED"]]);
   FX.ready();
 
   // ---- cumulative curves across days
