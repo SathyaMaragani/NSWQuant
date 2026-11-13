@@ -17,7 +17,7 @@ Its data comes from `paper_trade.py` on the backend: `strategies {A, C, T}` (gro
 ## Data contract (`state.json`, published by `live_predict.py`)
 `mode`, `symbol`, `updated`, `ticks`, `resolved`, `horizon`, `accuracy`, `rolling`, `majority`,
 `last {t, mid, conf, pred, probs[down, flat, up]}`, `confident {n, accuracy}`, `confusion` (3x3, rows = actual),
-`latency {compute_p50_us, compute_p99_us, lag_p50_ms, lag_p99_ms}`, `series[] {t, mid, bid, ask, pred, conf, out}`,
+`latency {compute_p50_us, compute_p99_us, lag_p50_ms, lag_p99_ms}`, `series[] {t, mid, bid, ask, pred, conf, out, lv: [bp[5], bq[5], ap[5], aq[5]]}` (lv feeds the depth heatmap),
 `book {bp, bq, ap, aq, spread, imb1, depth, tick}`, `hist {acc, lat, lag, conf}`,
 `model {trained_ticks, val_accuracy, val_majority, val_persistence, arch, bytes, runtime}`.
 Classes: 0 = down, 1 = flat, 2 = up. Keep these keys working; ask before needing new ones (they come from the backend).
