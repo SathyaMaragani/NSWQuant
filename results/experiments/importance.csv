@@ -1,0 +1,55 @@
+market,feature,f1_drop
+Nordic equities · FI-2010 (Nasdaq Nordic),spread,-0.0014895019476984794
+Nordic equities · FI-2010 (Nasdaq Nordic),micro,0.0029307617948102216
+Nordic equities · FI-2010 (Nasdaq Nordic),imb1,0.010192854980128452
+Nordic equities · FI-2010 (Nasdaq Nordic),imb3,-9.606729183697649e-05
+Nordic equities · FI-2010 (Nasdaq Nordic),imb5,0.002722148269583391
+Nordic equities · FI-2010 (Nasdaq Nordic),ofi1,0.0015622252294250627
+Nordic equities · FI-2010 (Nasdaq Nordic),ofi5,0.009021429032328498
+Nordic equities · FI-2010 (Nasdaq Nordic),ofi20,0.005307630492777604
+Nordic equities · FI-2010 (Nasdaq Nordic),ret1,0.007840171073435598
+Nordic equities · FI-2010 (Nasdaq Nordic),ret5,-0.001637879849283319
+Nordic equities · FI-2010 (Nasdaq Nordic),ret20,0.022184536160020474
+Nordic equities · FI-2010 (Nasdaq Nordic),rvol20,0.011235979301888133
+Nordic equities · FI-2010 (Nasdaq Nordic),vold,0.0
+Nordic equities · FI-2010 (Nasdaq Nordic),tbq_imb,0.0
+Nordic equities · FI-2010 (Nasdaq Nordic),since_move,0.05319966376143309
+Nordic equities · FI-2010 (Nasdaq Nordic),ofi_deep,0.0005951868842062336
+Nordic equities · FI-2010 (Nasdaq Nordic),ofi_deep5,0.0028784430550961027
+Nordic equities · FI-2010 (Nasdaq Nordic),svol5,0.0
+Crypto spot · BTCUSDT (Bybit),spread,-0.0001011783071948602
+Crypto spot · BTCUSDT (Bybit),micro,0.010420660512663937
+Crypto spot · BTCUSDT (Bybit),imb1,0.07291587192333315
+Crypto spot · BTCUSDT (Bybit),imb3,0.02120346291418329
+Crypto spot · BTCUSDT (Bybit),imb5,0.013644206943733028
+Crypto spot · BTCUSDT (Bybit),ofi1,0.012559491231619868
+Crypto spot · BTCUSDT (Bybit),ofi5,0.011594802078258304
+Crypto spot · BTCUSDT (Bybit),ofi20,-0.007360580953520657
+Crypto spot · BTCUSDT (Bybit),ret1,0.00013234648651794245
+Crypto spot · BTCUSDT (Bybit),ret5,-0.005560023410104087
+Crypto spot · BTCUSDT (Bybit),ret20,-0.001774292696283819
+Crypto spot · BTCUSDT (Bybit),rvol20,0.011907984394801174
+Crypto spot · BTCUSDT (Bybit),vold,0.0
+Crypto spot · BTCUSDT (Bybit),tbq_imb,0.0019003176861547288
+Crypto spot · BTCUSDT (Bybit),since_move,0.008367366349248562
+Crypto spot · BTCUSDT (Bybit),ofi_deep,0.0002992171624824347
+Crypto spot · BTCUSDT (Bybit),ofi_deep5,-0.0006099049139902668
+Crypto spot · BTCUSDT (Bybit),svol5,0.0
+Crypto perpetual · ETHUSDT (Bybit),spread,0.0
+Crypto perpetual · ETHUSDT (Bybit),micro,0.09249710105604009
+Crypto perpetual · ETHUSDT (Bybit),imb1,0.10730622348781171
+Crypto perpetual · ETHUSDT (Bybit),imb3,0.025091722451884402
+Crypto perpetual · ETHUSDT (Bybit),imb5,0.011498801058409225
+Crypto perpetual · ETHUSDT (Bybit),ofi1,0.008944782735219592
+Crypto perpetual · ETHUSDT (Bybit),ofi5,0.0119611726163662
+Crypto perpetual · ETHUSDT (Bybit),ofi20,-0.0016284586090188902
+Crypto perpetual · ETHUSDT (Bybit),ret1,0.0005838485451250541
+Crypto perpetual · ETHUSDT (Bybit),ret5,-0.002579751706717648
+Crypto perpetual · ETHUSDT (Bybit),ret20,5.509748802168257e-05
+Crypto perpetual · ETHUSDT (Bybit),rvol20,0.01594343716172808
+Crypto perpetual · ETHUSDT (Bybit),vold,0.0
+Crypto perpetual · ETHUSDT (Bybit),tbq_imb,-0.0012489093793438544
+Crypto perpetual · ETHUSDT (Bybit),since_move,0.02927334477967891
+Crypto perpetual · ETHUSDT (Bybit),ofi_deep,0.00030081045642482707
+Crypto perpetual · ETHUSDT (Bybit),ofi_deep5,0.0026800539387075717
+Crypto perpetual · ETHUSDT (Bybit),svol5,0.0

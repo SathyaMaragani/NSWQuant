@@ -1,0 +1,10 @@
+market,model,params,bytes,macro_f1,accuracy,latency_us_p50,note
+Nordic equities · FI-2010 (Nasdaq Nordic),"teacher: DeepLOB-style CNN+GRU, fp32",25795,103180,0.5156170537010988,0.5594716839352033,927.75,"trained 116s, 200,000 windows"
+Nordic equities · FI-2010 (Nasdaq Nordic),student: int8 MLP,627,1036,0.506690018313518,0.533771188277626,0.183898,same test rows as teacher
+Nordic equities · FI-2010 (Nasdaq Nordic),student distilled: int8 MLP,627,1036,0.5045978748837747,0.5405846736318839,0.210636,same test rows as teacher
+Crypto spot · BTCUSDT (Bybit),"teacher: DeepLOB-style CNN+GRU, fp32",25795,103180,0.5063056373667574,0.5883443369220113,889.65,"trained 60s, 200,000 windows"
+Crypto spot · BTCUSDT (Bybit),student: int8 MLP,627,1036,0.4846450826857205,0.5698470974948652,0.15054599999999999,same test rows as teacher
+Crypto spot · BTCUSDT (Bybit),student distilled: int8 MLP,627,1036,0.48917163392394974,0.566604074997898,0.15069,same test rows as teacher
+Crypto perpetual · ETHUSDT (Bybit),"teacher: DeepLOB-style CNN+GRU, fp32",25795,103180,0.5365053827156404,0.5943752661746262,1484.15,"trained 93s, 200,000 windows"
+Crypto perpetual · ETHUSDT (Bybit),student: int8 MLP,627,1036,0.50155780455451,0.5862874646891276,0.248234,same test rows as teacher
+Crypto perpetual · ETHUSDT (Bybit),student distilled: int8 MLP,627,1036,0.5173571789077186,0.5879219559716237,0.157026,same test rows as teacher

@@ -1,0 +1,17 @@
+# secrets: broker access tokens (keys live in environment variables, never in the repo)
+.kite_token
+.upstox_token
+.env
+# market data: recorded / downloaded / licensed, regenerate with the scripts
+data/
+fi2010/
+raw/
+# generated outputs
+results/live/
+results/replay/
+c/*.bin
+c/*.exe
+c/*.pdb
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

@@ -1,0 +1,9 @@
+market,k,temperature,ECE_raw,ECE_calibrated,conformal_coverage@90%,avg_set_size,singleton_up/down_share,singleton_up/down_accuracy,guaranteed_tau,acted_share,acted_accuracy
+Nordic equities · FI-2010 (Nasdaq Nordic),10,0.9721,0.0156,0.0174,0.9015,2.1792,0.01,0.5938,,0.0,
+Nordic equities · FI-2010 (Nasdaq Nordic),50,1.1638,0.0078,0.0264,0.9176,2.4326,0.0105,0.5643,,0.0,
+Crypto spot · BTCUSDT (Bybit),10,0.7565,0.0212,0.0335,0.8953,2.0897,0.0122,0.7534,0.6675,0.0282,0.72
+Crypto spot · BTCUSDT (Bybit),50,0.9783,0.0061,0.0063,0.9036,2.4347,0.0073,0.5554,,0.0,
+Crypto perpetual · ETHUSDT (Bybit),10,0.775,0.0073,0.0482,0.8814,1.9803,0.0295,0.6881,,0.0,
+Crypto perpetual · ETHUSDT (Bybit),50,0.6757,0.0124,0.0382,0.8785,2.3467,0.0229,0.5392,,0.0,
+Synthetic (simulator),10,0.976,0.0041,0.005,0.9033,2.3403,0.034,0.666,0.6381,0.0895,0.6973
+Synthetic (simulator),50,1.1114,0.008,0.0035,0.8987,2.5115,0.0027,0.4908,,0.0,

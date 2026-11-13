@@ -1,0 +1,81 @@
+market,k,labels,model,accuracy,macro_f1
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,majority,0.5088,0.2248
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,persistence,0.5007,0.3288
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,logreg,0.5273,0.4994
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,tree_d6,0.4988,0.4822
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,mlp_int8,0.5329,0.505
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,mlp_int8 @ top 100% conf,0.5329,
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,mlp_int8 @ top 50% conf,0.6408,
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,mlp_int8 @ top 25% conf,0.7421,
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,mlp_int8 @ top 10% conf,0.8321,
+Nordic equities · FI-2010 (Nasdaq Nordic),10,future-only,mlp_int8 @ top 5% conf,0.856,
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,majority,0.4874,0.2185
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,persistence,0.4705,0.3177
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,logreg,0.469,0.4537
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,tree_d6,0.4312,0.4297
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,mlp_int8,0.4771,0.4637
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,mlp_int8 @ top 100% conf,0.4771,
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,mlp_int8 @ top 50% conf,0.5414,
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,mlp_int8 @ top 25% conf,0.5928,
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,mlp_int8 @ top 10% conf,0.6376,
+Nordic equities · FI-2010 (Nasdaq Nordic),50,future-only,mlp_int8 @ top 5% conf,0.6659,
+Crypto spot · BTCUSDT (Bybit),10,future-only,majority,0.5059,0.224
+Crypto spot · BTCUSDT (Bybit),10,future-only,persistence,0.5353,0.3536
+Crypto spot · BTCUSDT (Bybit),10,future-only,logreg,0.4846,0.4824
+Crypto spot · BTCUSDT (Bybit),10,future-only,tree_d6,0.4865,0.4841
+Crypto spot · BTCUSDT (Bybit),10,future-only,mlp_int8,0.5627,0.4831
+Crypto spot · BTCUSDT (Bybit),10,future-only,mlp_int8 @ top 100% conf,0.5627,
+Crypto spot · BTCUSDT (Bybit),10,future-only,mlp_int8 @ top 50% conf,0.6289,
+Crypto spot · BTCUSDT (Bybit),10,future-only,mlp_int8 @ top 25% conf,0.6632,
+Crypto spot · BTCUSDT (Bybit),10,future-only,mlp_int8 @ top 10% conf,0.6976,
+Crypto spot · BTCUSDT (Bybit),10,future-only,mlp_int8 @ top 5% conf,0.7183,
+Crypto spot · BTCUSDT (Bybit),50,future-only,majority,0.3174,0.1606
+Crypto spot · BTCUSDT (Bybit),50,future-only,persistence,0.3925,0.2723
+Crypto spot · BTCUSDT (Bybit),50,future-only,logreg,0.4384,0.4383
+Crypto spot · BTCUSDT (Bybit),50,future-only,tree_d6,0.4348,0.4332
+Crypto spot · BTCUSDT (Bybit),50,future-only,mlp_int8,0.4367,0.4365
+Crypto spot · BTCUSDT (Bybit),50,future-only,mlp_int8 @ top 100% conf,0.4367,
+Crypto spot · BTCUSDT (Bybit),50,future-only,mlp_int8 @ top 50% conf,0.4765,
+Crypto spot · BTCUSDT (Bybit),50,future-only,mlp_int8 @ top 25% conf,0.5046,
+Crypto spot · BTCUSDT (Bybit),50,future-only,mlp_int8 @ top 10% conf,0.5461,
+Crypto spot · BTCUSDT (Bybit),50,future-only,mlp_int8 @ top 5% conf,0.5608,
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,majority,0.503,0.2231
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,persistence,0.5402,0.3637
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,logreg,0.5231,0.5124
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,tree_d6,0.5217,0.5131
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,mlp_int8,0.5853,0.5103
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,mlp_int8 @ top 100% conf,0.5853,
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,mlp_int8 @ top 50% conf,0.6745,
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,mlp_int8 @ top 25% conf,0.728,
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,mlp_int8 @ top 10% conf,0.7787,
+Crypto perpetual · ETHUSDT (Bybit),10,future-only,mlp_int8 @ top 5% conf,0.8001,
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,majority,0.3152,0.1598
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,persistence,0.3986,0.279
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,logreg,0.4437,0.4436
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,tree_d6,0.439,0.439
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,mlp_int8,0.4507,0.4493
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,mlp_int8 @ top 100% conf,0.4507,
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,mlp_int8 @ top 50% conf,0.4974,
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,mlp_int8 @ top 25% conf,0.5238,
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,mlp_int8 @ top 10% conf,0.5345,
+Crypto perpetual · ETHUSDT (Bybit),50,future-only,mlp_int8 @ top 5% conf,0.5416,
+Synthetic (simulator),10,future-only,majority,0.3412,0.1696
+Synthetic (simulator),10,future-only,persistence,0.3761,0.3444
+Synthetic (simulator),10,future-only,logreg,0.4782,0.4727
+Synthetic (simulator),10,future-only,tree_d6,0.4903,0.4881
+Synthetic (simulator),10,future-only,mlp_int8,0.5026,0.5007
+Synthetic (simulator),10,future-only,mlp_int8 @ top 100% conf,0.5026,
+Synthetic (simulator),10,future-only,mlp_int8 @ top 50% conf,0.5743,
+Synthetic (simulator),10,future-only,mlp_int8 @ top 25% conf,0.6299,
+Synthetic (simulator),10,future-only,mlp_int8 @ top 10% conf,0.6866,
+Synthetic (simulator),10,future-only,mlp_int8 @ top 5% conf,0.7183,
+Synthetic (simulator),50,future-only,majority,0.3371,0.1681
+Synthetic (simulator),50,future-only,persistence,0.351,0.3203
+Synthetic (simulator),50,future-only,logreg,0.4176,0.4002
+Synthetic (simulator),50,future-only,tree_d6,0.4053,0.3794
+Synthetic (simulator),50,future-only,mlp_int8,0.4215,0.408
+Synthetic (simulator),50,future-only,mlp_int8 @ top 100% conf,0.4215,
+Synthetic (simulator),50,future-only,mlp_int8 @ top 50% conf,0.4682,
+Synthetic (simulator),50,future-only,mlp_int8 @ top 25% conf,0.5093,
+Synthetic (simulator),50,future-only,mlp_int8 @ top 10% conf,0.555,
+Synthetic (simulator),50,future-only,mlp_int8 @ top 5% conf,0.5841,

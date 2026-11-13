@@ -1,0 +1,5 @@
+market,max_PSI,features_PSI>0.25,most_shifted
+Nordic equities · FI-2010 (Nasdaq Nordic),0.19596807784841047,0,"rvol20 0.20, since_move 0.18, ofi20 0.14"
+Crypto spot · BTCUSDT (Bybit),0.3461158490855012,1,"tbq_imb 0.35, micro 0.08, imb1 0.08"
+Crypto perpetual · ETHUSDT (Bybit),0.07502196269284742,0,"tbq_imb 0.08, spread 0.05, ofi_deep5 0.03"
+Synthetic (simulator),0.0032770909725028385,0,"rvol20 0.00, imb5 0.00, tbq_imb 0.00"
