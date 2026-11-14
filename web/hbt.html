@@ -85,7 +85,7 @@
     <div><div class="label">Algorithm X + Model · net at this moment</div><div class="big" id="kNet">–</div><div class="sub" id="kNetSub">–</div></div>
     <div><div class="label">Position</div><div class="big" id="kPos">–</div><div class="sub" id="kPosSub">cap ±2 ETH</div></div>
     <div><div class="label">Fills so far</div><div class="big" id="kFills">–</div><div class="sub" id="kFillsSub">–</div></div>
-    <div><div class="label">Binance signal</div><div class="big" id="kZ">–</div><div class="sub">z of the ±2–3 % book imbalance</div></div>
+    <div><div class="label">B Model</div><div class="big" id="kZ">–</div><div class="sub">z of the ±2–3 % book imbalance</div></div>
     <div><div class="label">Whole window</div><div class="big" id="kEnd">–</div><div class="sub" id="kEndSub">–</div></div>
   </section>
   <section class="card" aria-label="Replay controls">
@@ -155,8 +155,12 @@ function drawHeat() {
   const [ctx, w, h] = fitCanvas($("heat")), L = 56, R = 8, Tp = 8, B = 22, pw = w - L - R, ph = h - Tp - B, span = 120000, ta = T - span;
   ctx.fillStyle = "#0b1020"; ctx.fillRect(0, 0, w, h);
   const si = idxLE(S.t, T); if (si < 0) return;
-  const mid = (S.bid[si] + S.ask[si]) / 2, half = 40 * M.tick, y = p => Tp + ph * (1 - (p - (mid - half)) / (2 * half)), x = t => L + pw * (t - ta) / span;
-  const c0 = Math.max(0, idxLE(M.heat_t, ta)), c1 = idxLE(M.heat_t, T), rowH = Math.max(1, ph / 80);
+  // price range: everything the best bid/ask visited in the last 2 minutes (at least +-40 ticks, at most the +-150 recorded)
+  let plo = Infinity, phi = -Infinity;
+  for (let i = Math.max(0, idxLE(S.t, ta)); i <= si; i++) { plo = Math.min(plo, S.bid[i]); phi = Math.max(phi, S.ask[i]); }
+  const mid = (plo + phi) / 2, half = Math.min(150, Math.max(40, (phi - plo) / 2 / M.tick + 12)) * M.tick;
+  const y = p => Tp + ph * (1 - (p - (mid - half)) / (2 * half)), x = t => L + pw * (t - ta) / span;
+  const c0 = Math.max(0, idxLE(M.heat_t, ta)), c1 = idxLE(M.heat_t, T), rowH = Math.max(1, ph / (2 * half / M.tick));
   for (let c = c0; c <= c1; c++) {
     const xa = Math.max(L, x(M.heat_t[c])), xb = x(c + 1 <= c1 ? M.heat_t[c + 1] : T), lo = M.heat_lo[c];
     for (let j = 0; j < W; j++) {
@@ -182,7 +186,7 @@ function drawHeat() {
     if (f.side > 0) { ctx.moveTo(X, Y + 3); ctx.lineTo(X - 6, Y + 13); ctx.lineTo(X + 6, Y + 13); } else { ctx.moveTo(X, Y - 3); ctx.lineTo(X - 6, Y - 13); ctx.lineTo(X + 6, Y - 13); }
     ctx.closePath(); ctx.fill(); ctx.stroke(); }
   ctx.fillStyle = "#8f9bb3"; ctx.font = "11px 'IBM Plex Mono', monospace"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
-  for (let k = -4; k <= 4; k++) { const p = mid + k * 10 * M.tick; ctx.fillText(p.toFixed(2), L - 6, y(p)); ctx.fillStyle = "rgba(143,155,179,.12)"; ctx.fillRect(L, y(p), pw, 1); ctx.fillStyle = "#8f9bb3"; }
+  for (let k = -4; k <= 4; k++) { const p = mid + k * half / 4; ctx.fillText(p.toFixed(2), L - 6, y(p)); ctx.fillStyle = "rgba(143,155,179,.12)"; ctx.fillRect(L, y(p), pw, 1); ctx.fillStyle = "#8f9bb3"; }
   ctx.textAlign = "center"; ctx.textBaseline = "top";
   for (let k = 0; k <= 4; k++) { const t = ta + k * span / 4; ctx.fillText(new Date(t).toISOString().slice(11, 19), x(t), h - B + 6); }
 }
@@ -193,7 +197,7 @@ function drawLadder() {
   for (let j = W - 1; j >= 0; j--) { const t = lo + j, q = HEAT[c * W + j]; if (t <= bb && (q > 0 || (ob != null && Math.round(ob / M.tick) === t)) && bids.length < 15) bids.push([t, q]); }
   for (let j = 0; j < W; j++) { const t = lo + j, q = HEAT[c * W + j]; if (t >= ba && (q > 0 || (oa != null && Math.round(oa / M.tick) === t)) && asks.length < 15) asks.push([t, q]); }
   const mx = Math.max(1e-9, ...bids.map(r => r[1]), ...asks.map(r => r[1])), w = q => (100 * q / mx).toFixed(1) + "%";
-  const tag = (o, t) => o != null && Math.round(o / M.tick) === t ? '<span class="otag">X 0.1</span> ' : "";
+  const tag = (o, t) => o != null && Math.round(o / M.tick) === t ? `<span class="otag">X ${M.settings.size}</span> ` : "";
   const rows = ["<tr><th>Bid qty</th><th>Price</th><th>Ask qty</th></tr>"];
   asks.slice().reverse().forEach(([t, q]) => rows.push(`<tr class="a${tag(oa, t) ? " mine" : ""}"><td></td><td>${px(t * M.tick)}</td><td class="aq" style="--w:${w(q)}">${q > 0 ? qf(q) : "–"} ${tag(oa, t)}</td></tr>`));
   rows.push(`<tr class="spr"><td colspan="3">Spread ${(S.ask[si] - S.bid[si]).toFixed(2)} · mid ${px((S.ask[si] + S.bid[si]) / 2)}</td></tr>`);
@@ -202,7 +206,7 @@ function drawLadder() {
   $("ladTime").textContent = `as of ${clock(M.heat_t[c]).slice(0, 12)} · X's orders tagged`;
   const away = (o, s) => { if (o == null) return ""; const d = s > 0 ? bb - Math.round(o / M.tick) : Math.round(o / M.tick) - ba;
     return d === 0 ? ` (at the best ${s > 0 ? "bid" : "ask"})` : ` (${d} tick${d === 1 ? "" : "s"} behind the best ${s > 0 ? "bid" : "ask"})`; };
-  const capped = s => Math.abs(S.pos[si]) >= 2 - 1e-9 && Math.sign(S.pos[si]) === s ? "none · position cap" : "none";
+  const capped = s => Math.abs(S.pos[si]) >= M.settings.max_pos * M.settings.size - 1e-9 && Math.sign(S.pos[si]) === s ? "none · position cap" : "none";
   $("ladNote").innerHTML = `X's working orders: bid <b>${ob == null ? capped(1) : px(ob)}</b>${away(ob, 1)} · ask <b>${oa == null ? capped(-1) : px(oa)}</b>${away(oa, -1)}`;
 }
 let LASTFILLS = -1;
@@ -282,7 +286,9 @@ window.addEventListener("resize", () => M && draw());
     $("window").textContent = `${m.day} ${m.window_utc[0]}–${m.window_utc[1]} UTC · ${m.window_choice}`;
     $("kEnd").textContent = usd(s.net) + " USDT"; $("kEnd").className = "big " + (s.net >= 0 ? "pos" : "neg");
     $("kEndSub").innerHTML = `${s.fills.toLocaleString()} fills · ${s.orders_sent.toLocaleString()} orders · at retail fees <b>${usd(s.net_retail)}</b>`;
-    $("models").textContent = `${m.engine} · queue: ${md.queue} · order latency ${md.latency_ms} ms each way · feed ${md.feed_latency_ms} ms · ${md.exchange} · ` +
+    if (m.variant === "chosen" || m.variant === "chosen2") { $("pill").textContent = `Variant tuned on 13:00–14:00${m.settings.z_min ? ", trades only when |z| ≥ " + m.settings.z_min : ""}, tested once here · simulated`; $("kPosSub").textContent = `cap ±${m.settings.max_pos * m.settings.size} ETH · ${m.settings.size} ETH orders`; }
+    if (m.variant === "scalp") { $("pill").textContent = "Scalp variant · not the tested X · simulated"; $("kPosSub").textContent = `cap ±${m.settings.max_pos * m.settings.size} ETH · ${m.settings.size} ETH orders`; }
+    $("models").textContent = `${m.variant === "scalp" ? "SCALP VARIANT, re-quoted every " + m.quote_ms + " ms · " : ""}${m.engine} · queue: ${md.queue} · order latency ${md.latency_ms} ms each way · feed ${md.feed_latency_ms} ms · ${md.exchange} · ` +
       `maker ${md.maker_bp} bp, taker ${md.taker_bp} bp · settings frozen: c₁ ${m.settings.c1_bp} bp/z, half-spread ${m.settings.half_bp} bp, skew ${m.settings.skew_bp} bp, ±${m.settings.max_pos * m.settings.size} ETH`;
     $("load").remove();
     draw();

@@ -500,7 +500,7 @@ def run_market(name, quick):
 
 
 NAMES = {"A": "A  market maker, no model", "C": "C  NSQ-MM", "Q": "Q  NSQ-MM-Q (queue-aware)",
-         "O": "O  imbalance MM (hftbacktest port)", "X": "X  imbalance MM, Binance signal", "T": "T  signal taker"}
+         "O": "O  imbalance MM (hftbacktest port)", "X": "X  imbalance MM, B Model", "T": "T  signal taker"}
 
 
 def plot(rows, OUTP):

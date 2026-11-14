@@ -55,7 +55,7 @@ Net P&L after fees on the test day (USDT):
 | C NSQ-MM | −2,096.43 | −232.10 | −411.45 | −3,359.08 | −146.12 | −293.14 |
 | Q NSQ-MM-Q (queue-aware) | −107.71 | +11.54 | +65.73 | −24.38 | −0.48 | −8.88 |
 | O imbalance MM, hftbacktest port (Bybit book) | −1,131.11 | −100.09 | −302.01 | −1,552.63 | −83.30 | −195.98 |
-| **X imbalance MM, Binance signal** | −151.06 | **+201.57** | +175.68 | −524.54 | **+2.15** | −16.63 |
+| **X imbalance MM, B Model** | −151.06 | **+201.57** | +175.68 | −524.54 | **+2.15** | −16.63 |
 | T signal taker | −27.00 | −10.26 | +15.49 | −29.70 | −37.08 | +71.29 |
 
 Infrastructure cuts NSQ-MM's net loss by about 90% (retail → HFT firm). The model cuts the loss by 42–65% under every
@@ -98,7 +98,7 @@ Checks on X (ETH, test day, `hft_firm`):
 | check | net P&L |
 |---|---|
 | as tested (signal usable 1 s after each Binance snapshot) | +201.57 |
-| Binance signal 30 s / 60 s late | +212.17 / +193.46 |
+| B Model 30 s / 60 s late | +212.17 / +193.46 |
 | 5 min late / 1 hour late | +4.92 / −280.69 |
 | no maker rebate | +90.40 |
 | 10 ms queue race / back of every queue / 1 ms latency | +201.35 / +200.83 / +201.57 |
@@ -153,7 +153,7 @@ between them (the earlier simulator let the queue-depletion guard dodge part of 
 | `tinyml_midprice.ipynb` | full prediction pipeline and results |
 | `experiments.py` | teacher vs student, QAT, Pareto, importance, decision value |
 | `strategy.py` | NSQ-MM market maker, signal taker, event-driven backtester |
-| `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed (A, C, T, and X with a live Binance signal) + trading-desk dashboard |
+| `paper_trade.py` | live paper trading on Bybit's public ETHUSDT feed (A, C, T, and X with a live B Model) + trading-desk dashboard |
 | `hftsim.py`, `strategies.py` | HFT simulation environment with infrastructure profiles; strategy library (A, C, Q, O, X, T) |
 | `multiday.py`, `make_results.py` | frozen-settings test across 9 days; builds `web/results_data.json` for the Results page |
 | `live_predict.py` | live / replay NIFTY inference + dashboard server |

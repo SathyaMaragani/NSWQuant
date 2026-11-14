@@ -105,7 +105,7 @@
 <body>
 <header class="top"><div class="top-in">
   <div class="brand"><svg viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="5" fill="#0d1626"/><path d="M6 18 L10.5 8.5 L15 15 L20 7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>NSE<span>Quant</span></div>
-  <nav class="tabs" aria-label="Pages"><a href="./">Live paper trading</a><a class="on" href="results.html" aria-current="page">Results</a></nav>
+  <nav class="tabs" aria-label="Pages"><a href="./">Live paper trading</a><a href="hbt/">hftbacktest replay</a><a class="on" href="results.html" aria-current="page">Results</a></nav>
   <span class="grow"></span>
   <span class="badge">Backtests on recorded data + live paper trading · no real orders</span>
   <div class="seg" role="group" aria-label="Market"><button class="on" data-m="ETHUSDT">ETH</button><button data-m="BTCUSDT">BTC</button></div>
@@ -122,14 +122,14 @@
           (10 µs latency, −0.5 bp maker rebate). Settings were chosen on <b id="tuneDay">9 Nov</b> and never changed; every other day is out-of-sample.</p>
       </div>
       <div>
-        <div class="kl">The Binance signal · profit it added over all test days</div>
+        <div class="kl">The B Model · profit it added over all test days</div>
         <div class="fx-big" id="heroBig">–</div>
         <div class="ks" id="heroSub" style="margin-top:8px"></div>
         <div class="ks" id="gen" style="margin-top:10px;color:var(--muted)"></div>
       </div>
     </div>
     <div class="fx-stage" id="bars3d" aria-label="Cumulative net profit across the out-of-sample days for X, X0 and Q">
-      <div class="fx-key"><span><i style="background:#1f4fd6"></i>X · Binance signal</span><span><i style="background:#c0447a"></i>X0 · signal off</span><span><i style="background:#d08c1a"></i>Q · NSQ-MM-Q</span></div>
+      <div class="fx-key"><span><i style="background:#1f4fd6"></i>X · B Model</span><span><i style="background:#c0447a"></i>X0 · signal off</span><span><i style="background:#d08c1a"></i>Q · NSQ-MM-Q</span></div>
       <div class="fx-cap"><span><b>CUMULATIVE NET P&amp;L</b> · USDT · <span id="barsRange"></span></span><span>dashed line = zero</span></div>
     </div>
   </section>
@@ -160,7 +160,7 @@
 
   <section class="panel">
     <div class="ph"><h2>Profit by day</h2><span class="hint">net P&amp;L after fees and rebate, USDT · settings frozen from 9 Nov</span>
-      <div class="legend"><span><i class="sw" style="background:var(--cX)"></i>X · Binance signal</span><span><i class="sw" style="background:var(--cX0)"></i>X0 · same quotes, signal off</span><span><i class="sw" style="background:var(--cQ)"></i>Q · NSQ-MM-Q (TinyML)</span></div></div>
+      <div class="legend"><span><i class="sw" style="background:var(--cX)"></i>X · B Model</span><span><i class="sw" style="background:var(--cX0)"></i>X0 · same quotes, signal off</span><span><i class="sw" style="background:var(--cQ)"></i>Q · NSQ-MM-Q (TinyML)</span></div></div>
     <div class="pb"><div class="chart" id="cDays" role="img" aria-label="Net profit per day for X, X0 and Q"></div><div class="scroll"><table class="t" id="tDays"></table></div></div>
   </section>
 
@@ -242,7 +242,7 @@ function draw() {
   }
   const sum = (D.days_summary || []).filter(r => r.market === M);
   const sx = sum.find(r => r.strategy === "X"), sx0 = sum.find(r => r.strategy === "X0");
-  // headline: what the Binance signal adds = X minus the same quotes with the signal off (X0), day by day
+  // headline: what the B Model adds = X minus the same quotes with the signal off (X0), day by day
   const dX = (D.days || []).filter(r => r.market === M && r.strategy === "X"), d0 = (D.days || []).filter(r => r.market === M && r.strategy === "X0");
   const diff = dX.map(r => r.net_pnl - (d0.find(z => z.day === r.day)?.net_pnl ?? NaN)).filter(Number.isFinite);
   const sigTot = diff.reduce((a, b) => a + b, 0), sigMu = sigTot / diff.length;
@@ -283,7 +283,7 @@ function draw() {
     tooltip: { ...TIP, trigger: "axis", axisPointer: { type: "shadow", shadowStyle: { color: "rgba(13,22,38,.04)" } }, valueFormatter: v => usd(v) + " USDT" },
     xAxis: { type: "category", data: dlist.map(d => dd(d) + (d === D.test_day ? " (test)" : "")), axisLabel: AXL, axisTick: { show: false }, axisLine: { lineStyle: { color: "#cfd5de" } } },
     yAxis: { type: "value", axisLabel: { ...AXL, formatter: v => v }, splitLine: { lineStyle: { color: GRID } } },
-    series: ["X", "X0", "Q"].map(k => ({ name: { X: "X · Binance signal", X0: "X0 · signal off", Q: "Q · NSQ-MM-Q" }[k], type: "bar", data: bar(k), barGap: "12%", barMaxWidth: 26, itemStyle: { color: C[k] } })),
+    series: ["X", "X0", "Q"].map(k => ({ name: { X: "X · B Model", X0: "X0 · signal off", Q: "Q · NSQ-MM-Q" }[k], type: "bar", data: bar(k), barGap: "12%", barMaxWidth: 26, itemStyle: { color: C[k] } })),
   }, true);
   $("tDays").innerHTML = dlist.length ? "<tr><th>Day</th><th>X net</th><th>X before fees</th><th>X fills</th><th>X max drawdown</th><th>X0 net (signal off)</th><th>Q net</th><th>Price move, day</th></tr>" +
     dlist.map(day => { const a = get(day, "X"), b = get(day, "X0"), q = get(day, "Q");
@@ -297,7 +297,7 @@ function draw() {
   if (dlist.length) BARS.set(dlist.map(dd), { X: cum("X"), X0: cum("X0"), Q: cum("Q") }, { X: C.X, X0: C.X0, Q: C.Q }, usd);
   $("barsRange").textContent = dlist.length ? `${dd(dlist[0])} – ${dd(dlist[dlist.length - 1])}` : "";
   const acc2 = (D.accuracy || []).find(r => r.market.includes(M)), lat2 = (D.latency || []).find(r => r.name.startsWith("C full tick"));
-  MQ.set([["MARKET", M], ["BINANCE SIGNAL VALUE", diff.length ? usd(sigTot) + " USDT" : "–", cls(sigTot)],
+  MQ.set([["MARKET", M], ["B MODEL VALUE", diff.length ? usd(sigTot) + " USDT" : "–", cls(sigTot)],
     ["SIGNAL BETTER ON", diff.length ? `${sigWin}/${diff.length} DAYS` : "–"], ["X · NET, " + (sx ? sx.days : "–") + " DAYS", sx ? usd(sx.net_total) + " USDT" : "–", sx ? cls(sx.net_total) : ""],
     ["TEST DAY 10 NOV", x ? usd(x.net_pnl) + " USDT" : "–", x ? cls(x.net_pnl) : ""], ["ACCURACY", acc2 ? pct(acc2.model) : "–"],
     ["TOP-10% CALLS", acc2 ? pct(acc2.top10) : "–"], ["DECISION", lat2 ? lat2.p50_us + " µs" : "–"], ["MODEL", "532 B int8"], ["P&L", "SIMULATED"]]);
@@ -321,7 +321,7 @@ function draw() {
 
   // ---- strategy table
   const keys = ["A", "C", "Q", "O", "X", "T"];
-  const lab = { A: "Market maker, no model", C: "NSQ-MM (TinyML)", Q: "NSQ-MM-Q (TinyML, queue-aware)", O: "Imbalance MM, Bybit book (port)", X: "Imbalance MM, Binance signal", T: "Signal taker (TinyML)" };
+  const lab = { A: "Market maker, no model", C: "NSQ-MM (TinyML)", Q: "NSQ-MM-Q (TinyML, queue-aware)", O: "Imbalance MM, Bybit book (port)", X: "Imbalance MM, B Model", T: "Signal taker (TinyML)" };
   $("tStrat").innerHTML = "<tr><th>Strategy</th><th>Retail</th><th>HFT firm</th><th>HFT, before fees</th><th>Frictionless</th></tr>" + keys.map(k => {
     const r = p => S.find(s => s.key === k && s.profile === p);
     const cell = v => `<td class="${cls(v)}">${usd(v)}</td>`;
@@ -334,7 +334,7 @@ function draw() {
   const delay = (D.delay || []).filter(r => r.market === M);
   $("tRob").innerHTML = "<tr><th>Check</th><th>Net</th><th>Before fees</th></tr>" +
     rob.map(r => `<tr class="${r.profile === "hft_firm" ? "hl" : ""}"><td>${r.profile === "hft_firm" ? "As tested" : r.profile.replace("hft_firm, ", "")}</td><td class="${cls(r.net_pnl)}">${usd(r.net_pnl)}</td><td class="${cls(r.gross_pnl)}">${usd(r.gross_pnl)}</td></tr>`).join("") +
-    delay.filter(r => r.signal_delay_s > 1).map(r => `<tr><td>Binance signal ${r.signal_delay_s >= 60 ? r.signal_delay_s / 60 + " min" : r.signal_delay_s + " s"} late</td><td class="${cls(r.net_pnl)}">${usd(r.net_pnl)}</td><td class="${cls(r.gross_pnl)}">${usd(r.gross_pnl)}</td></tr>`).join("");
+    delay.filter(r => r.signal_delay_s > 1).map(r => `<tr><td>B Model ${r.signal_delay_s >= 60 ? r.signal_delay_s / 60 + " min" : r.signal_delay_s + " s"} late</td><td class="${cls(r.net_pnl)}">${usd(r.net_pnl)}</td><td class="${cls(r.gross_pnl)}">${usd(r.gross_pnl)}</td></tr>`).join("");
 
   // ---- accuracy + latency
   $("tAcc").innerHTML = "<tr><th>Market</th><th>TinyML</th><th>Majority</th><th>Persistence</th><th>Top 25% calls</th><th>Top 10% calls</th></tr>" +

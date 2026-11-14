@@ -27,6 +27,8 @@ from hftsim import binance_imbalance_z  # noqa: E402  (the project's signal code
 
 OUT = ROOT / "results" / "hbt"
 X = dict(half_bp=1.0, c1_bp=2.0, skew_bp=0.02, max_pos=20, size=0.1)    # multiday.CHOSEN["ETHUSDT perpetual (Bybit)"]["X"]
+# scalp variant (not the tested X): 0.5 ETH orders, same 2 ETH cap, tighter quotes, re-quoted every 10 ms
+SCALP = dict(half_bp=0.3, c1_bp=2.0, skew_bp=0.02, max_pos=4, size=0.5)
 TICK, LOT = 0.01, 0.01
 LATENCY_NS = 1_000_000
 MAKER_FEE, TAKER_FEE, RETAIL_MAKER = -0.00005, 0.0002, 0.0002
@@ -34,13 +36,14 @@ STEP_NS, QUOTE_NS, HEAT_NS, HEAT_W = 100_000_000, 1_000_000_000, 500_000_000, 15
 
 
 @njit
-def run(hbt, z_t0, z, half_bp, c1_bp, skew_bp, max_pos, size, rec, heat, heat_t, heat_lo, fills, mtr, counts):
+def run(hbt, z_t0, z, half_bp, c1_bp, skew_bp, max_pos, size, step_ns, quote_ns, z_min, rec, heat, heat_t, heat_lo, fills, mtr, counts):
     tick = hbt.depth(0).tick_size
     n_rec = n_heat = n_fill = n_tr = 0
     next_q = 0
     next_h = 0
+    next_r = 0
     zz = np.nan
-    while hbt.elapse(STEP_NS) == 0:
+    while hbt.elapse(step_ns) == 0:
         now = hbt.current_timestamp
         depth = hbt.depth(0)
         bb, ba = depth.best_bid_tick, depth.best_ask_tick
@@ -71,7 +74,7 @@ def run(hbt, z_t0, z, half_bp, c1_bp, skew_bp, max_pos, size, rec, heat, heat_t,
         mid = (bb + ba) / 2.0
         pos = hbt.position(0)
         if now >= next_q:                             # algorithm X: re-quote once a second
-            next_q = now + QUOTE_NS
+            next_q = now + quote_ns
             k = (now - z_t0) // 1_000_000_000
             zz = z[k] if 0 <= k < z.shape[0] else np.nan
             tpb = mid * 1e-4                          # ticks per basis point
@@ -83,6 +86,9 @@ def run(hbt, z_t0, z, half_bp, c1_bp, skew_bp, max_pos, size, rec, heat, heat_t,
                 na = max(int(math.ceil(res + half_bp * tpb)), ba)
                 want_b = pos < max_pos * size - 1e-9
                 want_a = pos > -max_pos * size + 1e-9
+                if abs(zz) < z_min:                   # weak signal: only the side that reduces the position
+                    want_b = want_b and pos < -1e-9
+                    want_a = want_a and pos > 1e-9
             vals = hbt.orders(0).values()
             while vals.has_next():
                 o = vals.get()
@@ -98,7 +104,8 @@ def run(hbt, z_t0, z, half_bp, c1_bp, skew_bp, max_pos, size, rec, heat, heat_t,
                 hbt.submit_sell_order(0, na, na * tick, size, GTX, LIMIT, False)
                 counts[0] += 1
         # series: book top, our working orders, position, equity, signal
-        if n_rec < rec.shape[0]:
+        if now >= next_r and n_rec < rec.shape[0]:
+            next_r = now + STEP_NS
             ob = oa = np.nan
             vals = hbt.orders(0).values()
             while vals.has_next():
@@ -132,7 +139,12 @@ def run(hbt, z_t0, z, half_bp, c1_bp, skew_bp, max_pos, size, rec, heat, heat_t,
     return n_rec, n_heat, n_fill, n_tr
 
 
-def main(day, start, end, symbol="ETHUSDT"):
+def main(day, start, end, variant="x", symbol="ETHUSDT"):
+    cfg, step_ns, quote_ns = (SCALP, 10_000_000, 10_000_000) if variant == "scalp" else (X, STEP_NS, QUOTE_NS)
+    if variant in ("chosen", "chosen2"):          # the setting hbt/tune.py picked on a different hour (round 1 / round 2)
+        c = json.loads((OUT / ("chosen.json" if variant == "chosen" else "chosen_round2.json")).read_text())
+        cfg, quote_ns = c["settings"], c["quote_ms"] * 1_000_000
+        step_ns = 10_000_000 if c["quote_ms"] < 100 else STEP_NS
     data = ROOT / "hbt" / "data" / f"{symbol}_{day}_{start.replace(':', '')}_{end.replace(':', '')}.npz"
     t0 = int(datetime.fromisoformat(f"{day}T{start}:00").replace(tzinfo=timezone.utc).timestamp() * 1e9)
     t1 = int(datetime.fromisoformat(f"{day}T{end}:00").replace(tzinfo=timezone.utc).timestamp() * 1e9)
@@ -154,7 +166,7 @@ def main(day, start, end, symbol="ETHUSDT"):
     heat_t, heat_lo = np.zeros(secs * 2, np.int64), np.zeros(secs * 2, np.int64)
     fills, mtr = np.zeros((100_000, 5)), np.zeros((2_000_000, 4))
     counts = np.zeros(2, np.int64)
-    n_rec, n_heat, n_fill, n_tr = run(hbt, day0 * 1_000_000, z, X["half_bp"], X["c1_bp"], X["skew_bp"], X["max_pos"], X["size"],
+    n_rec, n_heat, n_fill, n_tr = run(hbt, day0 * 1_000_000, z, cfg["half_bp"], cfg["c1_bp"], cfg["skew_bp"], cfg["max_pos"], cfg["size"], step_ns, quote_ns, cfg.get("z_min", 0.0),
                                       rec, heat, heat_t, heat_lo, fills, mtr, counts)
     sv = hbt.state_values(0)
     hbt.close()
@@ -168,7 +180,7 @@ def main(day, start, end, symbol="ETHUSDT"):
             "window_choice": "the busiest hour of the day by market trade count (chosen before running X)",
             "models": {"queue": "power-probability (n = 3)", "latency_ms": LATENCY_NS / 1e6, "exchange": "no partial fills",
                        "maker_bp": MAKER_FEE * 1e4, "taker_bp": TAKER_FEE * 1e4, "feed_latency_ms": 1.0},
-            "settings": X, "tick": TICK, "heat_w": HEAT_W, "heat_ms": HEAT_NS // 1_000_000, "summary": summary,
+            "settings": cfg, "variant": variant, "quote_ms": quote_ns / 1e6, "tick": TICK, "heat_w": HEAT_W, "heat_ms": HEAT_NS // 1_000_000, "summary": summary,
             "t0_ms": t0 // 1_000_000, "t1_ms": t1 // 1_000_000,
             "series": {"t": (rec[:, 0] // 1_000_000).astype(np.int64).tolist(), "bid": rec[:, 1].round(2).tolist(), "ask": rec[:, 2].round(2).tolist(),
                        "our_bid": [None if math.isnan(v) else round(v, 2) for v in rec[:, 3]],
@@ -188,4 +200,4 @@ def main(day, start, end, symbol="ETHUSDT"):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:5])
