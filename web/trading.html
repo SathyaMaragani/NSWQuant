@@ -159,8 +159,10 @@
   .hscroll.tall { height: 318px; overflow-y: auto; border-top: 1px solid var(--line); }
   .blot { min-width: 640px; }
   .blot th { position: sticky; top: 0; background: var(--panel); z-index: 1; white-space: nowrap; }
-  .blot td { white-space: nowrap; font-size: 11.5px; padding: 5px 6px; }
+  .blot td { white-space: nowrap; font-size: 11.5px; padding: 5px 5px; }
+  .blot th { padding-left: 5px; padding-right: 5px; }
   .blot tr.sel td { background: var(--brand-soft); }
+  .blot td.two { line-height: 1.35; font-size: 11px; }
   .blot tr.flash td { animation: rowflash 2.4s ease-out; }
   @keyframes rowflash { from { background: #fff1bf; } to { background: transparent; } }
   .st { display: inline-block; font: 600 10px/1 var(--sans); letter-spacing: .06em; padding: 3px 6px; border-radius: 3px; }
@@ -202,7 +204,7 @@
   .tapebox { height: 470px; overflow: auto; }
   .tape { min-width: 0; } .tape td:nth-child(2) { font-weight: 600; }
   .empty td { text-align: center !important; color: var(--muted); font-family: var(--sans); padding: 18px; }
-  @media (max-width: 1350px) { .desk { grid-template-columns: 420px minmax(0, 1fr); } .desk > .card:last-child { grid-column: 1 / -1; } .tapebox { height: 260px; } }
+  @media (max-width: 1500px) { .desk { grid-template-columns: 420px minmax(0, 1fr); } .desk > .card:last-child { grid-column: 1 / -1; } .tapebox { height: 260px; } #upd { display: none; } }
   @media (max-width: 860px) { .desk { grid-template-columns: 1fr; } }
   @media (max-width: 1350px) { .kpis { grid-template-columns: repeat(3, 1fr); } .kpis .card:nth-child(n+4) { border-top: 1px solid var(--line); } .kpis .card:nth-child(4) { border-left: 0; } .row2, .row3 { grid-template-columns: 1fr; } }
   @media (max-width: 760px) { .main, .top-in { padding-left: 16px; padding-right: 16px; } .kpis { grid-template-columns: 1fr; } .kpis .card { border-left: 0 !important; border-top: 1px solid var(--line); } .kpis .card:first-child { border-top: 0; } .vsep { display: none; } }
@@ -218,10 +220,16 @@
   <span class="pill" id="live"><span class="dot"></span><span id="liveTxt">Connecting</span></span>
   <span class="sub" id="upd">–</span>
   <span class="grow"></span>
-  <span class="pill warn">Simulated orders only · nothing is sent</span>
+  <span class="pill warn" title="Every order is simulated against the live public Bybit feed; nothing is sent to an exchange">Simulated orders · nothing sent</span>
 </div></header>
 <div id="mq"></div>
 <main class="main">
+  <section class="kpis">
+    <div class="card hero"><div class="label"><span class="tag tX">X</span>Algorithm X + Model · net, MM fee tier (as tested)</div><div class="big" id="pX">–</div><div class="sub" id="sX">–</div></div>
+    <div class="card"><div class="label"><span class="tag tA">A</span>Market maker, no model</div><div class="big" id="pA">–</div><div class="sub" id="sA">–</div></div>
+    <div class="card"><div class="label">Adverse selection · 10 s after fill</div><div class="big" id="mk">–</div><div class="sub" id="mkSub">ticks per fill, X vs no model</div></div>
+    <div class="card"><div class="label">B Model · ±2–3 % book imbalance</div><div class="big" id="zK">–</div><div class="sub" id="zSub">–</div></div>
+  </section>
   <section class="desk" aria-label="Trading desk">
     <div class="card">
       <div class="head"><h2>Order book</h2><span class="sub" id="dSpread">–</span>
@@ -264,12 +272,6 @@
       <div class="tapebox"><table class="blot tape" id="tape"></table></div>
     </div>
   </section>
-  <section class="kpis">
-    <div class="card hero"><div class="label"><span class="tag tX">X</span>Algorithm X + Model · net, MM fee tier (as tested)</div><div class="big" id="pX">–</div><div class="sub" id="sX">–</div></div>
-    <div class="card"><div class="label"><span class="tag tA">A</span>Market maker, no model</div><div class="big" id="pA">–</div><div class="sub" id="sA">–</div></div>
-    <div class="card"><div class="label">Adverse selection · 10 s after fill</div><div class="big" id="mk">–</div><div class="sub" id="mkSub">ticks per fill, X vs no model</div></div>
-    <div class="card"><div class="label">Binance signal · ±2–3 % book imbalance</div><div class="big" id="zK">–</div><div class="sub" id="zSub">–</div></div>
-  </section>
 
   <section class="row2">
     <div class="card">
@@ -310,9 +312,9 @@
   <section class="term" aria-label="Algorithm terminal">
     <div class="term-head">
       <h2>Algorithm terminal</h2>
-      <span class="cmd">$ python paper_trade.py --symbol ETHUSDT</span>
+      <span class="cmd">algorithm X + Model · ETHUSDT</span>
       <span class="sim" title="Orders are simulated against the live public Bybit feed; nothing is sent to an exchange">Simulated orders · live market data</span>
-      <span class="stat">signals <b id="tMsgs">0</b> · fills <b id="tFills">0</b></span>
+      <span class="stat">B Model readings <b id="tMsgs">0</b> · orders <b id="tOrd">0</b> · fills <b id="tFills">0</b></span>
       <div class="tseg" role="group" aria-label="Filter terminal lines">
         <button class="on" data-f="all">All</button><button data-f="fills">Fills only</button>
       </div>
@@ -442,7 +444,7 @@ price.setOption({
   ]
 });
 equity.setOption({
-  animationDurationUpdate: 400, grid: { left: 54, right: 12, top: 10, bottom: 26 },
+  animationDurationUpdate: 400, grid: { left: 64, right: 12, top: 10, bottom: 26 },
   tooltip: { ...TIP, trigger: "axis", valueFormatter: v => usd(v) + " USDT" },
   xAxis: { type: "time", axisLabel: { color: INK2, fontFamily: "IBM Plex Mono", fontSize: 11, formatter: "{HH}:{mm}", hideOverlap: true }, splitLine: { show: false } },
   yAxis: { type: "value", scale: true, axisLabel: { color: INK2 }, splitLine: { lineStyle: { color: GRID } } },
@@ -479,7 +481,7 @@ function stepsX(S, X, XP) {
   $("qB").className = "qbox qbid" + (w[1] == null ? " pulled" : ""); $("qA").className = "qbox qask" + (w[-1] == null ? " pulled" : "");
   $("qB").innerHTML = `<small>our bid</small>${w[1] == null ? why(1) : px(w[1])}`;
   $("qA").innerHTML = `<small>our ask</small>${w[-1] == null ? why(-1) : px(w[-1])}`;
-  $("risk").innerHTML = `Position <b style="color:#0d1626">${X.position >= 0 ? "+" : ""}${X.position.toFixed(2)} ETH</b> of ±${cap} ETH cap · sits out when the Binance signal is unavailable<br>` +
+  $("risk").innerHTML = `Position <b style="color:#0d1626">${X.position >= 0 ? "+" : ""}${X.position.toFixed(2)} ETH</b> of ±${cap} ETH cap · sits out when the B Model is unavailable<br>` +
     `c₁ = ${XP.c1_bp} bp per z · half-spread = ${XP.half_bp} bp · skew = ${XP.skew_bp} bp per lot · ${XP.profile} profile, maker ${XP.maker_bps} bp`;
 }
 function render(S) {
@@ -487,7 +489,8 @@ function render(S) {
   $("sym").textContent = S.symbol.replace("USDT", "USDT ") + "PERP";
   $("live").className = "pill"; $("liveTxt").textContent = "Live · " + S.venue;
   const up = S.uptime_s, hh = Math.floor(up / 3600), mm = Math.floor(up % 3600 / 60);
-  $("upd").textContent = `Updated ${S.updated} · up ${hh}h ${mm}m · ${S.book_events.toLocaleString()} book events · ${S.trades.toLocaleString()} trades`;
+  $("upd").textContent = `Updated ${S.updated} · up ${hh}h ${mm}m`;
+  $("upd").title = `${S.book_events.toLocaleString()} book events · ${S.trades.toLocaleString()} trades`;
   const st = S.strategies;
   pnl("pA", st.A);
   $("sA").textContent = `before fees · after VIP0 fees ${usd(st.A.net_vip0)} · ${st.A.fills} fills · pos ${st.A.position.toFixed(2)}`;
@@ -553,11 +556,11 @@ function render(S) {
     ...ourSeries(S),
   ] });
   applyZoom();
-  renderTerm(S.log);
+  renderTerm(S);
   equity.setOption({ series: SHOW.map(k => ({ id: k, data: S.equity[k] || [] })) });
   const name = { A: '<span class="tag tA">A</span>', X: '<span class="tag tX">X</span>' };
   $("fills").innerHTML = "<tr><th>Time</th><th>Strategy</th><th>Side</th><th>Price</th><th>Qty</th></tr>" +
-    S.fills.filter(f => SHOW.includes(f.strategy)).reverse().slice(0, 30).map(f => `<tr><td>${new Date(f.t).toLocaleTimeString()}</td><td>${name[f.strategy]}</td>` +
+    S.fills.filter(f => SHOW.includes(f.strategy)).reverse().slice(0, 30).map(f => `<tr><td>${ms(f.t)}</td><td>${name[f.strategy]}</td>` +
       `<td class="${f.side > 0 ? "pos" : "neg"}">${f.side > 0 ? "▲ buy" : "▼ sell"}</td><td>${px(f.price)}</td><td>${f.qty}</td></tr>`).join("");
   if (!$("bt").dataset.done) {
     $("bt").dataset.done = 1;
@@ -693,12 +696,12 @@ function renderDesk(D) {
   $("blot").parentElement.classList.toggle("short", DB === "pos" && !!ck);
   let html;
   if (DB === "pos") {
-    html = "<tr><th>Strategy</th><th>Net qty</th><th>Avg price</th><th>Mark (mid)</th><th>Unrealised</th><th>Realised</th><th title=\"Negative = fees paid, positive = maker rebate received\">Fees / rebate</th><th>Net P&amp;L</th><th>Bought</th><th>Sold</th></tr>" +
+    html = "<tr><th>Strategy</th><th>Net qty</th><th>Avg price</th><th>Mark (mid)</th><th>Unrealised</th><th>Realised</th><th title=\"Negative = fees paid, positive = maker rebate received\">Fees / rebate</th><th>Net P&amp;L</th><th>Bought · sold</th></tr>" +
       ALL.map(k => { const p = pos(k);
         return `<tr class="${k === ck ? "sel" : ""}${flashK[k] ? " flash" : ""}"><td>${stag(k)}${SNAME[k].slice(4)}</td>` +
           `<td class="${p.qty > 0 ? "pos" : p.qty < 0 ? "neg" : ""}">${p.qty > 0 ? "+" : ""}${qty(p.qty)}</td><td>${p.avg == null ? "–" : px(p.avg)}</td><td>${px(p.mark)}</td>` +
           `<td>${sgn(p.unrealised)}</td><td>${sgn(p.realised)}</td><td>${sgn(-p.fees)}</td><td><b>${sgn(p.net)}</b></td>` +
-          `<td>${qty(p.buy_qty)} @ ${p.buy_avg == null ? "–" : px(p.buy_avg)}</td><td>${qty(p.sell_qty)} @ ${p.sell_avg == null ? "–" : px(p.sell_avg)}</td></tr>`; }).join("");
+          `<td class="two">${qty(p.buy_qty)} @ ${p.buy_avg == null ? "–" : px(p.buy_avg)}<br>${qty(p.sell_qty)} @ ${p.sell_avg == null ? "–" : px(p.sell_avg)}</td></tr>`; }).join("");
     if (ck) {                                     // details of the selected strategy's position
       const p = pos(ck), S0 = LASTS || {}, unit = S0.unit || 0.1;
       const cap = ck === "X" && S0.x ? S0.x.max_pos * S0.x.unit : ck === "T" ? unit : 5 * unit;   // A and C: MarketMaker qmax 5 lots
@@ -827,40 +830,61 @@ async function poll() {
 }
 
 // ---------------------------------------------------------------- algorithm terminal
-let LOG = [], LOGSEQ = 0, TF = "all", TPAUSE = false, NEWSEQ = 0;
-const tcount = { msgs: 0, fills: 0, trips: 0 };
-const WHO = { M: "MODEL", C: "NSQ-MM", T: "TAKER", X: "ALGO X" };
+// Algorithm X's own lines, rebuilt from its order book and trade book (so the terminal shows its recent history the moment
+// the page opens) plus the engine's B Model readings: SIGNAL, PLACE, AMEND, CANCEL, FILL.
+let LOG = [], TF = "all", TPAUSE = false, TFIRST = true;
+const TKEYS = new Set();
+const WHO = { X: "ALGO X", A: "NO MODEL" };
 const esc = x => String(x).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 const tclock = t => { const d = new Date(t); return d.toLocaleTimeString("en-GB", { hour12: false }) + "." + String(d.getMilliseconds()).padStart(3, "0"); };
-const tkeep = e => SHOW.includes(e.s) && (TF === "all" || ["FILL", "EXIT", "FLAT"].includes(e.k));
+const tkeep = e => TF === "all" || e.k === "FILL";
 function tline(e) {
-  const kc = e.k === "FILL" ? (/\bBUY\b/.test(e.m) ? "k-buy" : "k-sell") : "k-" + e.k;
-  return `<div class="tl ${e.k}${e.seq > NEWSEQ ? " new" : ""}"><span class="t">${tclock(e.t)}</span>  <span class="w">${WHO[e.s] || e.s}</span> <span class="k ${kc}">${e.k}</span> <span class="m">${esc(e.m)}</span></div>`;
+  const kc = e.k === "FILL" ? (/^BUY/.test(e.m) ? "k-buy" : "k-sell") : "k-" + e.k;
+  return `<div class="tl ${e.k}${e.isNew ? " new" : ""}"><span class="t">${tclock(e.t)}</span>  <span class="w">${WHO[e.s] || e.s}</span> <span class="k ${kc}">${e.k}</span> <span class="m">${esc(e.m)}</span></div>`;
 }
 function drawTerm() {
   const el = $("term"), stick = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
   el.innerHTML = LOG.filter(tkeep).slice(-300).map(tline).join("") + '<div class="tl"><span class="t">$</span> <span class="cursor"></span></div>';
-  NEWSEQ = LOGSEQ;
+  LOG.forEach(x => { x.isNew = false; });
   if (stick) el.scrollTop = el.scrollHeight;
 }
-function renderTerm(entries) {
-  const add = (entries || []).filter(e => e.seq > LOGSEQ);
-  if (entries && entries.length && entries[entries.length - 1].seq < LOGSEQ) { LOG = []; LOGSEQ = 0; NEWSEQ = 0; return renderTerm(entries); }   // engine restarted
-  if (!add.length) return;
-  for (const e of add) {
-    if (!SHOW.includes(e.s)) continue;
-    if (e.k === "SIGNAL") tcount.msgs++;
-    if (["FILL", "EXIT"].includes(e.k)) tcount.fills++;
-    if (e.k === "FLAT") tcount.trips++;
+function termEvents(S) {
+  const out = [];
+  const g = S.strategies && S.strategies.X && S.strategies.X.signal, XP = S.x;
+  if (g && g.z != null && XP && S.last) {                    // a line for every new B Model reading (one every 30 s)
+    const lean = XP.c1_bp * g.z, act = lean > XP.half_bp ? "bid joins the best bid, ask stands back" : lean < -XP.half_bp ? "ask joins the best ask, bid stands back" : "both sides stand back from the touch";
+    out.push({ key: `z${g.snapshots}:${g.z.toFixed(4)}`, t: S.last.ts, s: "X", k: "SIGNAL",
+      m: `B Model: Binance ±2–3 % imbalance ${(g.imbalance >= 0 ? "+" : "") + g.imbalance.toFixed(3)} → z ${(g.z >= 0 ? "+" : "") + g.z.toFixed(2)} → fair value ${(lean >= 0 ? "+" : "") + lean.toFixed(2)} bp vs mid · ${act}` });
   }
-  LOGSEQ = add[add.length - 1].seq; LOG.push(...add);
-  if (LOG.length > 800) LOG.splice(0, LOG.length - 800);
-  $("tMsgs").textContent = tcount.msgs.toLocaleString(); $("tFills").textContent = tcount.fills.toLocaleString(); $("tTrips").textContent = tcount.trips.toLocaleString();
+  const b = S.desk && S.desk.books && S.desk.books.X;
+  if (b) {
+    for (const o of b.orders) {
+      const sd = o.side > 0 ? "BUY" : "SELL", p = o.px == null ? "MKT" : px(o.px);
+      out.push({ key: o.id + "P", t: o.t, s: "X", k: "PLACE", m: `${sd} ${qty(o.qty)} @ ${p} · post-only limit · order ${o.id}` });
+      if (o.status === "OPEN" && o.mods) out.push({ key: o.id + "M" + o.mods, t: o.tu, s: "X", k: "AMEND", m: `order ${o.id} re-priced to ${p} to follow fair value · modified ×${o.mods}` });
+      if (o.status === "CANCELLED") out.push({ key: o.id + "C", t: o.tu, s: "X", k: "CANCEL", m: `order ${o.id} ${sd} @ ${p} withdrawn · fair value moved or position cap reached` });
+      if (o.status === "REJECTED") out.push({ key: o.id + "R", t: o.tu, s: "X", k: "CANCEL", m: `order ${o.id} rejected · ${o.note}` });
+    }
+    for (const f of b.trades) out.push({ key: f.id, t: f.t, s: "X", k: "FILL",
+      m: `${f.side > 0 ? "BUY" : "SELL"} ${qty(f.qty)} @ ${px(f.px)} · order ${f.oid} · trade ${f.id} · maker rebate +${(-f.fee).toFixed(4)} USDT` });
+  }
+  return out;
+}
+function renderTerm(S) {
+  const add = termEvents(S).filter(e => !TKEYS.has(e.key));
+  if (!add.length) return;
+  for (const e of add) { TKEYS.add(e.key); e.isNew = !TFIRST; }
+  TFIRST = false;
+  LOG.push(...add);
+  LOG.sort((a, b) => a.t - b.t);
+  if (LOG.length > 1500) LOG.splice(0, LOG.length - 1500);
+  const n = k => LOG.filter(e => e.k === k).length;
+  $("tMsgs").textContent = n("SIGNAL").toLocaleString(); $("tOrd").textContent = n("PLACE").toLocaleString(); $("tFills").textContent = n("FILL").toLocaleString();
   if (!TPAUSE) drawTerm();
 }
 document.querySelectorAll(".tseg button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tseg button").forEach(x => x.classList.toggle("on", x === b));
-  TF = b.dataset.f; NEWSEQ = LOGSEQ; drawTerm(); $("term").scrollTop = $("term").scrollHeight;
+  TF = b.dataset.f; drawTerm(); $("term").scrollTop = $("term").scrollHeight;
 });
 $("tPause").onclick = () => {
   TPAUSE = !TPAUSE; $("tPause").classList.toggle("on", TPAUSE); $("tPause").setAttribute("aria-pressed", TPAUSE);
